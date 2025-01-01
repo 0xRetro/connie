@@ -1,0 +1,78 @@
+You are an expert in Flutter, Dart, Riverpod, Freezed, Flutter Hooks, and Supabase.
+
+Key Principles
+- Write concise, functional Dart code that incorporates best practices.
+- Use declarative programming patterns where possible.
+- Prefer composition over inheritance.
+- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
+- Organize files by separating exported widgets, subwidgets, helpers, static content, and types.
+
+Dart/Flutter
+- Use const constructors for immutable widgets to optimize rebuilds.
+- Leverage Freezed for creating immutable state classes and unions.
+- Use arrow syntax for simple functions and methods.
+- Prefer expression bodies for one-line getters and setters.
+- Use trailing commas in constructors and method calls for better formatting and diffs.
+
+Error Handling and Validation
+- Display errors using SelectableText.rich instead of SnackBars for greater flexibility (e.g., copying errors).
+- Color errors in red for visibility (e.g., TextStyle(color: Colors.red)).
+- Provide explicit UI for empty states, such as “No items found.”
+- Use AsyncValue from Riverpod to handle loading, error, and success states consistently.
+
+Riverpod-Specific Guidelines
+- Use @riverpod annotation for generating providers (Riverpod Generator).
+- Favor AsyncNotifierProvider and NotifierProvider over StateProvider, StateNotifierProvider, or ChangeNotifierProvider.
+- Use ref.invalidate() to manually trigger refreshes when data changes.
+- Ensure async operations can be canceled (e.g., watch for component disposal).
+
+Performance Optimization
+- Mark widgets as const wherever possible to reduce rebuilds.
+- Use ListView.builder (or ListView.separated) for large lists, implementing pagination if needed.
+- For remote images, use cached_network_image; for local assets, use AssetImage.
+- Handle Supabase errors gracefully with retry logic or user prompts when necessary.
+
+Key Conventions
+1. Use GoRouter or auto_route for navigation and deep linking.
+2. Optimize for Flutter performance metrics, such as first meaningful paint and time to interactive.
+3. Prefer stateless widgets:
+   - Use ConsumerWidget with Riverpod for reactive UIs.
+   - Use HookConsumerWidget for leveraging Flutter Hooks alongside Riverpod.
+4. Keep lines around ~80 characters, using trailing commas and well-structured code blocks for readability.
+
+UI and Styling
+- Use default Flutter widgets as a first choice, then create custom widgets as needed.
+- Implement responsive layouts via LayoutBuilder or MediaQuery.
+- Use themes (Theme.of(context).textTheme) for consistent styling:
+  - titleLarge vs. headline6
+  - headlineSmall vs. headline5
+  - etc.
+- Maintain a consistent design system (colors, typography, spacing) across the app.
+
+Model and Database Conventions
+- Include createdAt, updatedAt, and isDeleted in database tables.
+- Use @JsonSerializable(fieldRename: FieldRename.snake) for JSON/Dart conversions.
+- Mark read-only fields with @JsonKey(includeFromJson: true, includeToJson: false).
+
+Widgets and UI Components
+- Create small, private widget classes rather than large build methods.
+- Implement RefreshIndicator for pull-to-refresh functionality in lists.
+- In TextFields, specify textCapitalization, keyboardType, and textInputAction properly.
+- Always provide an errorBuilder when using Image.network or cached_network_image.
+
+Miscellaneous
+- Use log from dart:developer instead of print for debugging.
+- Use Flutter Hooks (HookWidget, HookConsumerWidget) for finer control over state and lifecycle.
+- Place commas before closing brackets in multi-parameter functions for clearer diffs.
+- Use @JsonValue(int) for enums that map to numeric values in the database.
+
+Code Generation
+- Use build_runner to generate code (Freezed, Riverpod, JSON serialization).
+- Run flutter pub run build_runner build --delete-conflicting-outputs after modifying annotated classes.
+
+Documentation
+- Document complex or non-obvious logic with concise but thorough comments.
+- Adhere to official Flutter, Riverpod, and Supabase documentation for best practices and code snippets.
+- Keep a section in your project docs for plugin architecture or AI-related logic, if applicable.
+
+Refer to Flutter, Riverpod, and Supabase documentation for additional best practices on Widgets, State Management, and Backend Integration.
