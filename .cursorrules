@@ -1,4 +1,4 @@
-You are an expert in Flutter, Dart, Riverpod, Freezed, Flutter Hooks, and Supabase.
+You are an expert in Flutter, Dart, Riverpod, Freezed, Flutter Hooks, and database implementations.
 
 Key Principles
 - Write concise, functional Dart code that incorporates best practices.
@@ -30,7 +30,7 @@ Performance Optimization
 - Mark widgets as const wherever possible to reduce rebuilds.
 - Use ListView.builder (or ListView.separated) for large lists, implementing pagination if needed.
 - For remote images, use cached_network_image; for local assets, use AssetImage.
-- Handle Supabase errors gracefully with retry logic or user prompts when necessary.
+- Handle database errors gracefully with retry logic or user prompts when necessary.
 
 Key Conventions
 1. Use GoRouter or auto_route for navigation and deep linking.
@@ -72,7 +72,7 @@ Code Generation
 
 Documentation
 - Document complex or non-obvious logic with concise but thorough comments.
-- Adhere to official Flutter, Riverpod, and Supabase documentation for best practices and code snippets.
+- Adhere to official Flutter, Riverpod, and database documentation for best practices and code snippets.
 - Keep a section in your project docs for plugin architecture or AI-related logic, if applicable.
 
-Refer to Flutter, Riverpod, and Supabase documentation for additional best practices on Widgets, State Management, and Backend Integration.
+Refer to Flutter, Riverpod, and database documentation for additional best practices on Widgets, State Management, and Backend Integration.

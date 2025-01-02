@@ -94,6 +94,10 @@ glob
 2.19
 file:///C:/Users/RandomCiv/AppData/Local/Pub/Cache/hosted/pub.dev/glob-2.1.2/
 file:///C:/Users/RandomCiv/AppData/Local/Pub/Cache/hosted/pub.dev/glob-2.1.2/lib/
+go_router
+2.18
+file:///C:/Users/RandomCiv/AppData/Local/Pub/Cache/hosted/pub.dev/go_router-6.5.9/
+file:///C:/Users/RandomCiv/AppData/Local/Pub/Cache/hosted/pub.dev/go_router-6.5.9/lib/
 gotrue
 2.17
 file:///C:/Users/RandomCiv/AppData/Local/Pub/Cache/hosted/pub.dev/gotrue-1.12.6/
@@ -427,7 +431,7 @@ flutter_web_plugins
 file:///C:/Users/RandomCiv/Downloads/flutter/packages/flutter_web_plugins/
 file:///C:/Users/RandomCiv/Downloads/flutter/packages/flutter_web_plugins/lib/
 connie
-2.19
+3.0
 file:///D:/Dev/connie/
 file:///D:/Dev/connie/lib/
 2

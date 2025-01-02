@@ -170,6 +170,12 @@
       "languageVersion": "2.19"
     },
     {
+      "name": "go_router",
+      "rootUri": "file:///C:/Users/RandomCiv/AppData/Local/Pub/Cache/hosted/pub.dev/go_router-6.5.9",
+      "packageUri": "lib/",
+      "languageVersion": "2.18"
+    },
+    {
       "name": "gotrue",
       "rootUri": "file:///C:/Users/RandomCiv/AppData/Local/Pub/Cache/hosted/pub.dev/gotrue-1.12.6",
       "packageUri": "lib/",
@@ -647,10 +653,10 @@
       "name": "connie",
       "rootUri": "../",
       "packageUri": "lib/",
-      "languageVersion": "2.19"
+      "languageVersion": "3.0"
     }
   ],
-  "generated": "2025-01-01T22:03:10.824372Z",
+  "generated": "2025-01-02T00:04:23.845838Z",
   "generator": "pub",
   "generatorVersion": "3.6.0",
   "flutterRoot": "file:///C:/Users/RandomCiv/Downloads/flutter",
