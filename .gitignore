@@ -59,3 +59,19 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Supabase related
+**/supabase/.branches
+**/supabase/.temp
+**/supabase/functions/node_modules
+
+# Melos related
+.melos_tool/
+
+# Code generation
+**/*.g.dart
+**/*.freezed.dart
+**/*.gr.dart
+
+# Test coverage
+coverage/

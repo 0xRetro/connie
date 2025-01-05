@@ -1,81 +1,105 @@
 # App Router
 
-The app router is responsible for managing the navigation flow between different screens in the application. It uses the `go_router` library to define routes and their corresponding screen widgets.
-
-## What is go_router?
-
-`go_router` is a declarative routing package for Flutter that simplifies the process of defining routes and navigating between screens. It provides a simple and intuitive way to define routes using a tree-like structure, where each route is associated with a specific screen widget.
-
-Some key features of `go_router` include:
-
-- Declarative route definitions
-- Typed route parameters
-- Nested navigation
-- Automatic deep linking
-- Support for custom transitions and animations
-
-## Routes
-
-- `/`: The main screen route, which displays the `MainScreen` widget
-
-## How go_router is used in the Connie AI Assistant project
-
-In the Connie AI Assistant project, we use `go_router` to define and manage the application's routes. The `app_router.dart` file contains the `GoRouter` instance that sets up the navigation for the entire application.
-
-Here's how we define the routes in `app_router.dart`:
-
-```dart
-final GoRouter appRouter = GoRouter(
-  routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const MainScreen(),
-    ),
-    // TODO: Add more routes for other screens (e.g., chat screen, settings screen)
-  ],
-);
-```
-
-In this code:
-
-1. We create a `GoRouter` instance called `appRouter`.
-
-2. We define the available routes using the `routes` parameter, which takes a list of `GoRoute` objects.
-
-3. Each `GoRoute` object represents a specific route and contains a `path` (the URL path) and a `builder` function that returns the corresponding screen widget.
-
-4. We have a single route defined for the main screen ('/'), which displays the `MainScreen` widget.
-
-5. The TODO comment indicates that we will add more routes for other screens (e.g., chat screen, settings screen) as the project progresses.
-
-By defining the routes in this way, we can easily navigate between screens using the `GoRouter` instance.
-
-## Usage
-
-To navigate to a specific route, you can use the `go` method provided by the `GoRouter` instance. For example:
-
-```dart
-GoRouter.of(context).go('/route-name');
-```
-
-For example, to navigate to the chat screen (assuming we have defined a route for it), we would use:
-
-```dart
-GoRouter.of(context).go('/chat');
-```
-
-## Benefits of using go_router
-
-Using `go_router` in the Connie AI Assistant project provides several benefits:
-
-- It allows us to define routes in a declarative and centralized manner, making it easy to understand and maintain the application's navigation structure.
-- It provides type safety for route parameters, reducing the chances of runtime errors related to navigation.
-- It supports nested navigation, allowing us to create complex navigation hierarchies with ease.
-- It generates automatic deep links for each route, enabling deep linking capabilities in the application.
-- It offers customization options for transitions and animations, allowing us to create visually appealing navigation experiences.
-
-By leveraging `go_router`, we can create a robust and scalable navigation system for the Connie AI Assistant project, making it easier to add new screens and manage the flow between them.
+Manages application routing, navigation, and deep linking using GoRouter.
 
 ## File Location
+`lib/navigation/app_router.dart`
 
-`lib/navigation/app_router.dart` 
+## Key Patterns & Principles
+- Uses GoRouter for navigation
+- Implements route guards
+- Handles deep linking
+- Manages redirects
+- Uses logging service
+- Tracks analytics
+- Handles errors
+- Supports testing
+
+## Responsibilities
+Does:
+- Define routes
+- Handle navigation
+- Manage redirects
+- Track analytics
+- Log navigation
+- Handle errors
+- Support deep links
+- Guard routes
+
+Does Not:
+- Handle UI logic
+- Process user input
+- Store application data
+- Configure services
+- Handle theming
+- Manage state
+- Define layouts
+- Process business logic
+
+## Component Connections
+- [x] Config Layer
+  - [x] Environment
+  - [ ] Theme
+  - [x] Routes
+  - [x] Logger
+- [x] Service Layer
+  - [ ] Storage
+  - [ ] API
+  - [x] Logger
+  - [x] Analytics
+- [x] State Layer
+  - [x] First Run Provider
+  - [ ] Theme Provider
+  - [ ] App Preferences
+- [x] UI Layer
+  - [x] Screens
+  - [ ] Widgets
+  - [ ] Layout
+
+## Dependencies
+- `go_router`: Navigation
+- `flutter_riverpod`: State management
+- First run provider
+- Logger service
+- Analytics service
+- Environment configuration
+
+## Integration Points
+- `first_run_provider.dart`: Setup flow
+- Screen components
+- Analytics service
+- Error screen
+
+## Additional Details
+
+### Route Structure
+Features:
+- Main screen
+- Settings screen
+- People screens
+- Schema screens
+- Setup workflow
+- Error handling
+
+### Navigation Features
+Features:
+- Deep linking
+- Route guards
+- Redirects
+- Analytics
+- Error handling
+
+### Analytics Integration
+Features:
+- Screen tracking
+- Navigation events
+- Error tracking
+- Performance metrics
+- User journeys
+
+### Testing Support
+- Route testing
+- Guard testing
+- Analytics testing
+- Integration testing
+- Mock navigation 

@@ -49,4 +49,4 @@ When working with the `pubspec.yaml` file, follow these best practices:
 4. Organize the `pubspec.yaml` file in a logical and readable manner, with clear comments when necessary.
 5. Run `flutter pub get` after making changes to the `pubspec.yaml` file to ensure that the dependencies are properly installed and updated.
 
-By understanding the purpose, structure, and usage of the `pubspec.yaml` file, you can effectively manage your project's dependencies and configuration in the Connie AI Assistant project. 
+By understanding the purpose, structure, and usage of the `pubspec.yaml` file, you can effectively manage your project's dependencies and configuration in the Connie AI Assistant project.
