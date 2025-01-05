@@ -48,6 +48,11 @@ class NavBar extends StatelessWidget implements PreferredSizeWidget {
             onPressed: () => context.go('/people'),
           ),
           _buildNavButton(
+            icon: Icons.smart_toy,
+            label: 'AI',
+            onPressed: () => context.go('/ai'),
+          ),
+          _buildNavButton(
             icon: Icons.settings,
             label: 'Settings',
             onPressed: () => context.go('/settings'),
@@ -63,21 +68,12 @@ class NavBar extends StatelessWidget implements PreferredSizeWidget {
     required String label,
     required VoidCallback onPressed,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: kSpacingSmall),
-      child: TextButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon, color: Colors.white),
-        label: Text(
-          label,
-          style: kHeadline2.copyWith(color: Colors.white),
-        ),
-        style: TextButton.styleFrom(
-          padding: const EdgeInsets.symmetric(
-            horizontal: kSpacingMedium,
-            vertical: kSpacingSmall,
-          ),
-        ),
+    return TextButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, color: Colors.white),
+      label: Text(
+        label,
+        style: const TextStyle(color: Colors.white),
       ),
     );
   }

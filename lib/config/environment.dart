@@ -2,7 +2,9 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import '../services/initialization/database_initializer.dart';
 
-/// Manages environment-specific configuration and feature flags
+/// Manages environment-specific configuration and platform detection.
+/// Supports development, staging, and production environments.
+/// This class cannot be instantiated and provides only static access.
 class Environment {
   // Make constructor private to prevent instantiation
   Environment._();
@@ -22,7 +24,7 @@ class Environment {
   /// Platform-specific getters
   static bool get isAndroid => Platform.isAndroid;
   static bool get isIOS => Platform.isIOS;
-  static bool get isWeb => false; // Add proper web detection if needed
+  static bool get isWeb => kIsWeb;
   static bool get isDesktop => Platform.isWindows || Platform.isMacOS || Platform.isLinux;
 
   /// Throws if environment is invalid
@@ -57,6 +59,43 @@ class Environment {
     _ => 'http://localhost:8080',
   };
 
+  /// Ollama configuration based on environment
+  static Map<String, dynamic> get ollamaConfig => switch (name) {
+    'production' => {
+      'baseUrl': 'http://localhost:11434',
+      'defaultModel': 'llama3.2',
+      'maxContextLength': 8192,
+      'defaultTemperature': 0.7,
+      'defaultTopP': 0.9,
+      'defaultTopK': 40,
+      'connectionTimeout': 30000,
+      'enableDebugLogs': false,
+      'trackPerformance': true,
+    },
+    'staging' => {
+      'baseUrl': 'http://localhost:11434',
+      'defaultModel': 'llama3.2',
+      'maxContextLength': 8192,
+      'defaultTemperature': 0.7,
+      'defaultTopP': 0.9,
+      'defaultTopK': 40,
+      'connectionTimeout': 30000,
+      'enableDebugLogs': true,
+      'trackPerformance': true,
+    },
+    _ => {
+      'baseUrl': 'http://localhost:11434',
+      'defaultModel': 'llama3.2',
+      'maxContextLength': 4096,
+      'defaultTemperature': 0.7,
+      'defaultTopP': 0.9,
+      'defaultTopK': 40,
+      'connectionTimeout': 30000,
+      'enableDebugLogs': true,
+      'trackPerformance': true,
+    },
+  };
+
   /// Database configuration based on environment
   static Map<String, dynamic> get databaseConfig => switch (name) {
     'production' => {
@@ -73,4 +112,32 @@ class Environment {
 
   /// Get the database file name
   static String get databaseName => DatabaseInitializer.databaseName;
+
+  /// Add environment-specific database config validation
+  static void validateDatabaseConfig() {
+    final config = databaseConfig;
+    if (config['maxConnections'] < 1) {
+      throw ArgumentError('Invalid database connection configuration');
+    }
+  }
+
+  /// Validate Ollama configuration
+  static void validateOllamaConfig() {
+    final config = ollamaConfig;
+    if (config['maxContextLength'] < 1) {
+      throw ArgumentError('Invalid Ollama context length configuration');
+    }
+    if (config['defaultTemperature'] < 0 || config['defaultTemperature'] > 1) {
+      throw ArgumentError('Invalid Ollama temperature configuration');
+    }
+    if (config['defaultTopP'] < 0 || config['defaultTopP'] > 1) {
+      throw ArgumentError('Invalid Ollama top-p configuration');
+    }
+    if (config['defaultTopK'] < 1) {
+      throw ArgumentError('Invalid Ollama top-k configuration');
+    }
+    if (config['connectionTimeout'] < 1000) {
+      throw ArgumentError('Invalid Ollama connection timeout configuration');
+    }
+  }
 } 

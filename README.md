@@ -49,6 +49,65 @@ lib/
 - Flutter SDK (>=3.0.0)
 - Dart SDK (>=3.0.0)
 - SQLite for local database
+- For Mac Development:
+  - Xcode (latest version) for iOS development
+  - Android Studio for Android development
+  - Homebrew (recommended for package management)
+  - VS Code or IntelliJ IDEA (recommended IDEs)
+
+### Mac Development Setup
+
+> **Note**: If you encounter Ruby/CocoaPods issues during setup, please refer to our [Ruby and CocoaPods Setup Guide](docs/help/RUBY_COCOAPODS_SETUP.md).
+
+1. Install Homebrew (if not installed):
+   ```bash
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   ```
+
+2. Install Flutter using Homebrew:
+   ```bash
+   brew install flutter
+   ```
+
+3. Install development tools:
+   ```bash
+   # Install Xcode from the Mac App Store
+   xcode-select --install
+   sudo xcodebuild -license
+   
+   # Install Android Studio
+   brew install --cask android-studio
+   ```
+
+4. Configure Flutter:
+   ```bash
+   flutter doctor
+   # Follow any additional instructions from flutter doctor output
+   ```
+
+5. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/connie.git
+   cd connie
+   ```
+
+6. Install dependencies:
+   ```bash
+   flutter pub get
+   ```
+
+7. Run the code generator:
+   ```bash
+   dart run build_runner build --delete-conflicting-outputs
+   ```
+
+8. Start the application:
+   ```bash
+   flutter run
+   ```
+
+### IDE Setup (Recommended)
+* Install the Flutter and Dart plugins from JetBrains marketplace
 
 ### Installation
 

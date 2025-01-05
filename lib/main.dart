@@ -16,6 +16,8 @@ void main() async {
   try {
     // Validate environment first
     Environment.validateEnvironment();
+    Environment.validateDatabaseConfig();
+    Environment.validateOllamaConfig();
     
     final progress = InitializationProgress();
     
@@ -24,6 +26,7 @@ void main() async {
     progress.updateStage('logger');
     LoggerService.info('Starting app bootstrap', data: {
       'environment': Environment.name,
+      'ollamaConfig': Environment.ollamaConfig,
     });
 
     // Setup progress tracking
@@ -74,6 +77,7 @@ void main() async {
     LoggerService.info('App bootstrap completed', data: {
       'isFirstRun': isFirstRun,
       'environment': Environment.name,
+      'ollamaConfig': Environment.ollamaConfig,
     });
     
     // Run the app with proper provider configuration
@@ -110,7 +114,10 @@ void main() async {
       'Fatal error during initialization',
       error: e,
       stackTrace: stack,
-      data: {'environment': Environment.name},
+      data: {
+        'environment': Environment.name,
+        'ollamaConfig': Environment.ollamaConfig,
+      },
     );
     rethrow;
   }

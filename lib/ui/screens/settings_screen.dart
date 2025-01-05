@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/nav_bar.dart';
 import '../widgets/error_boundary.dart';
 import '../widgets/system_info_card.dart';
+import '../widgets/ollama_settings_card.dart';
 import '../layout/responsive_layout.dart';
 import '../layout/spacing_constants.dart';
 import '../layout/typography_styles.dart';
@@ -35,6 +36,8 @@ class SettingsScreen extends ConsumerWidget {
                   style: kBodyText,
                 ),
                 const SizedBox(height: kSpacingLarge),
+                const OllamaSettingsCard(),
+                const SizedBox(height: kSpacingMedium),
                 const SystemInfoCard(),
               ],
             ),

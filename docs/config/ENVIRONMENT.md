@@ -1,52 +1,40 @@
 # Environment Configuration
 
-Manages environment-specific configuration, feature flags, and platform detection for the application.
+Manages environment-specific settings and platform detection for the application.
 
 ## File Location
 `lib/config/environment.dart`
 
 ## Key Patterns & Principles
-- Uses singleton pattern with private constructor
-- Implements platform detection
-- Uses switch expressions for configuration
-- Provides environment validation
-- Uses static getters for configuration
-- Implements feature flags
-- Uses const where possible
-- Provides type safety
+- Singleton pattern (private constructor)
+- Platform-aware configuration
+- Environment validation
+- Static configuration provider
 
 ## Responsibilities
 Does:
-- Manage environment configuration
-- Validate environment settings
+- Define valid environments
+- Provide environment-specific settings
 - Detect platform type
-- Configure feature flags
-- Provide API endpoints
-- Configure database settings
-- Handle environment validation
-- Provide debug settings
+- Validate environment configuration
+- Provide database configuration
 
 Does Not:
-- Handle environment changes
-- Manage state
-- Handle platform-specific code
-- Configure UI
-- Handle database operations
-- Manage services
-- Handle analytics directly
-- Store user preferences
+- Handle environment switching
+- Manage runtime configuration
+- Handle API calls
+- Process environment variables
 
 ## Component Connections
 - [x] Config Layer
-  - [x] Database Config
   - [ ] Theme
   - [ ] Routes
-  - [x] Logger
+  - [x] Constants
 - [x] Service Layer
   - [x] Database
-  - [x] API
-  - [x] Logger
-  - [x] Analytics
+  - [ ] API
+  - [ ] Logger
+  - [x] Initialization
 - [ ] State Layer
   - [ ] Providers
   - [ ] Notifiers
@@ -55,71 +43,35 @@ Does Not:
   - [ ] Screens
   - [ ] Widgets
   - [ ] Layouts
-- [x] Platform Layer
-  - [x] Android
-  - [x] iOS
-  - [x] Desktop
-  - [x] Web
+- [ ] Util Layer
+  - [ ] Helpers
+  - [ ] Extensions
+  - [ ] Types
 
 ## Execution Pattern
 - [x] Has Initialization Order
   1. Environment validation
   2. Platform detection
-  3. Feature flag setup
-  4. Configuration loading
+  3. Database configuration setup
 
 ## Dependencies
 - `dart:io`: Platform detection
-- Environment variables
-- Build configuration
+- `database_initializer.dart`: Database configuration
 
 ## Integration Points
-- `main.dart`: Environment validation
-- `database.dart`: Database configuration
-- `logger_service.dart`: Logging configuration
-- `analytics_service.dart`: Analytics settings
+- `lib/config/ollama_config.dart`: Uses environment context
+- `lib/services/initialization/database_initializer.dart`: Database setup
+- Various service configurations that depend on environment
 
 ## Additional Details
 
 ### Configuration
-Environment Types:
-- Development
-- Staging
-- Production
+- Supports development, staging, and production
+- Platform-specific detection
+- Debug information toggle
+- Analytics configuration
 
-Feature Flags:
-- Debug information
-- File logging
-- Analytics
-- Query logging
-
-### Platform Detection
-Supported Platforms:
-- Android
-- iOS
-- Web (prepared)
-- Desktop (Windows/macOS/Linux)
-
-### API Configuration
-Endpoints per Environment:
-- Production: https://api.example.com
-- Staging: https://staging-api.example.com
-- Development: http://localhost:8080
-
-### Database Configuration
-Settings per Environment:
-Production:
-- Max Connections: 10
-- Cache Enabled: true
-- Query Logging: false
-
-Development/Staging:
-- Max Connections: 5
-- Cache Enabled: false
-- Query Logging: true
-
-### Testing Support
-- Environment validation testing
-- Platform detection mocking
-- Configuration override support
-- Feature flag testing 
+### Services
+- Database configuration by environment
+- Logging configuration
+- Analytics enablement 
