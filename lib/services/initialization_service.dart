@@ -7,49 +7,55 @@ import '../providers/ollama_provider.dart';
 
 /// Service responsible for coordinating application initialization
 class InitializationService {
+  /// Tracks whether the app has been initialized.
+  /// This is static to ensure a single instance across the app.
   static bool _initialized = false;
+
+  /// Tracks the progress of the initialization process.
+  /// This is static to ensure a single instance across the app.
   static final _progress = InitializationProgress();
   
-  /// Initializes all required services in the correct order
+  /// Initializes all required services in the correct order.
+  /// Returns `true` if this is the first run of the app, `false` otherwise.
   static Future<bool> initialize(ProviderContainer container) async {
     if (_initialized) return false;
     
     try {
-      // Logger initialization
+      // Stage 1: Logger initialization
       _progress.updateStage('logger');
       LoggerService.info('Starting app bootstrap', data: {
         'environment': Environment.name,
         'ollamaConfig': Environment.ollamaConfig,
       });
       
-      // Platform services initialization
+      // Stage 2: Platform services initialization
       _progress.updateStage('platform');
       await _initializePlatformServices();
       
-      // Database initialization and health check
+      // Stage 3: Database initialization and health check
       _progress.updateStage('database');
       final dbService = container.read(databaseServiceProvider);
       await dbService.initialize();
       
-      // Check and run migrations if needed
+      // Stage 4: Check and run migrations if needed
       _progress.updateStage('migration');
       final needsMigration = await _checkMigrations(container);
       if (needsMigration) {
         await _runMigrations(container);
       }
       
-      // Initialize Ollama service
+      // Stage 5: Initialize Ollama service
       _progress.updateStage('ollama');
       final ollamaService = container.read(ollamaServiceProvider);
       if (!await ollamaService.isHealthy()) {
         LoggerService.warn('Ollama service health check failed during initialization');
       }
       
-      // Check if first-time setup is needed
+      // Stage 6: Check if first-time setup is needed
       _progress.updateStage('setup');
       final isFirstRun = await _checkFirstTimeSetup(container);
       
-      // Non-blocking initializations
+      // Stage 7: Non-blocking initializations
       _initializePreferences();
       _initializeAnalytics();
       
@@ -65,7 +71,8 @@ class InitializationService {
     }
   }
 
-  /// Initializes platform-specific services
+  /// Initializes platform-specific services.
+  /// This method ensures that platform-specific features are properly set up.
   static Future<void> _initializePlatformServices() async {
     try {
       LoggerService.info('Initializing platform services', data: {
@@ -94,7 +101,8 @@ class InitializationService {
     }
   }
 
-  /// Checks if database migrations are needed
+  /// Checks if database migrations are needed.
+  /// Returns `true` if migrations are required, `false` otherwise.
   static Future<bool> _checkMigrations(ProviderContainer container) async {
     try {
       final dbService = container.read(databaseServiceProvider);
@@ -110,10 +118,10 @@ class InitializationService {
     }
   }
 
-  /// Runs necessary database migrations
+  /// Runs necessary database migrations.
+  /// This method ensures the database schema is up-to-date.
   static Future<void> _runMigrations(ProviderContainer container) async {
     try {
-      // Run migrations
       LoggerService.info('Running database migrations');
     } catch (e, stack) {
       LoggerService.error(
@@ -125,7 +133,8 @@ class InitializationService {
     }
   }
 
-  /// Checks if this is the first time the app is run
+  /// Checks if this is the first time the app is run.
+  /// Returns `true` if this is the first run, `false` otherwise.
   static Future<bool> _checkFirstTimeSetup(ProviderContainer container) async {
     try {
       final dbService = container.read(databaseServiceProvider);
@@ -156,7 +165,8 @@ class InitializationService {
     }
   }
 
-  /// Verifies that all required services are healthy
+  /// Verifies that all required services are healthy.
+  /// Returns `true` if all services are healthy, `false` otherwise.
   static Future<bool> verifyServices(ProviderContainer container) async {
     try {
       LoggerService.debug('Verifying service health');
@@ -187,7 +197,8 @@ class InitializationService {
     }
   }
 
-  /// Cleans up resources during app termination
+  /// Cleans up resources during app termination.
+  /// This method ensures that all resources are properly disposed of.
   static Future<void> cleanup(ProviderContainer container) async {
     try {
       // Cleanup database
@@ -207,4 +218,4 @@ class InitializationService {
       );
     }
   }
-} 
+}

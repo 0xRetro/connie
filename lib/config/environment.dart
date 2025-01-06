@@ -1,6 +1,5 @@
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
-import '../services/initialization/database_initializer.dart';
 
 /// Manages environment-specific configuration and platform detection.
 /// Supports development, staging, and production environments.
@@ -123,7 +122,7 @@ class Environment {
   };
 
   /// Get the database file name
-  static String get databaseName => DatabaseInitializer.databaseName;
+  static String get databaseName => 'connie.db'; // Updated to hardcoded value
 
   /// Add environment-specific database config validation
   static void validateDatabaseConfig() {
@@ -152,4 +151,4 @@ class Environment {
       throw ArgumentError('Invalid Ollama connection timeout configuration');
     }
   }
-} 
+}

@@ -11,28 +11,27 @@ class ResponsiveLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return ResponsiveWrapper.builder(
       child,
-      defaultScale: true,
+      defaultScale: true, // Enable scaling for responsive design
       minWidth: 320,
       defaultName: MOBILE,
       breakpoints: [
-        const ResponsiveBreakpoint.resize(350, name: MOBILE),
-        const ResponsiveBreakpoint.autoScale(600, name: TABLET),
-        const ResponsiveBreakpoint.resize(800, name: TABLET),
-        const ResponsiveBreakpoint.autoScale(1000, name: DESKTOP),
+        const ResponsiveBreakpoint.resize(ResponsiveBreakpoints.mobile, name: MOBILE),
+        const ResponsiveBreakpoint.autoScale(ResponsiveBreakpoints.tablet, name: TABLET),
+        const ResponsiveBreakpoint.resize(ResponsiveBreakpoints.desktop, name: DESKTOP),
       ],
       breakpointsLandscape: [
-        const ResponsiveBreakpoint.resize(560, name: MOBILE),
-        const ResponsiveBreakpoint.autoScale(800, name: TABLET),
-        const ResponsiveBreakpoint.resize(1000, name: DESKTOP),
+        const ResponsiveBreakpoint.resize(ResponsiveBreakpoints.mobile, name: MOBILE),
+        const ResponsiveBreakpoint.autoScale(ResponsiveBreakpoints.tablet, name: TABLET),
+        const ResponsiveBreakpoint.resize(ResponsiveBreakpoints.desktop, name: DESKTOP),
       ],
       background: Container(
-        color: Theme.of(context).colorScheme.surface,
+        color: Theme.of(context).colorScheme.surface, // Use surface color for consistency with the theme
       ),
     );
   }
 }
 
-/// Provides responsive spacing utilities
+/// Provides responsive spacing utilities for padding and margins.
 class ResponsiveSpacing {
   static double get xs => 4;
   static double get sm => 8;
@@ -64,7 +63,7 @@ class ResponsiveSpacing {
   }
 }
 
-/// Provides responsive layout constraints
+/// Provides responsive layout constraints for max width and constrained boxes.
 class ResponsiveConstraints {
   static double get maxWidthMobile => 600;
   static double get maxWidthTablet => 1000;
@@ -94,4 +93,11 @@ class ResponsiveConstraints {
       ),
     );
   }
+}
+
+/// Defines responsive breakpoints for the application
+class ResponsiveBreakpoints {
+  static const double mobile = 350;
+  static const double tablet = 600;
+  static const double desktop = 1000;
 }

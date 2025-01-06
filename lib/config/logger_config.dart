@@ -5,15 +5,15 @@ import 'dart:convert';
 import 'package:path/path.dart' as path;
 import 'environment.dart';
 
-/// Configures and creates logger instances with environment-specific settings
+/// Configures and creates logger instances with environment-specific settings.
 class LoggerConfig {
-  /// Maximum log file size in bytes (5MB)
+  /// Maximum log file size in bytes (5MB).
   static const int maxLogSize = 5 * 1024 * 1024;
   
-  /// Number of backup log files to keep
+  /// Number of backup log files to keep.
   static const int maxBackupFiles = 3;
 
-  /// Creates a configured logger instance based on environment
+  /// Creates a configured logger instance based on environment.
   static Future<Logger> createLogger() async {
     final outputs = <LogOutput>[ConsoleOutput()];
     
@@ -39,7 +39,7 @@ class LoggerConfig {
     );
   }
 
-  /// Creates a file output for persistent logging
+  /// Creates a file output for persistent logging.
   static Future<FileOutput> _createFileOutput() async {
     final logFile = await getLogFile();
     return FileOutput(
@@ -49,20 +49,20 @@ class LoggerConfig {
     );
   }
 
-  /// Gets or creates the log file in the logs directory
+  /// Gets or creates the log file in the logs directory.
   static Future<File> getLogFile() async {
     final logsDir = await getLogsDirectory();
     await logsDir.create(recursive: true);
     return File(path.join(logsDir.path, 'app.log'));
   }
 
-  /// Gets the directory where logs are stored
+  /// Gets the directory where logs are stored.
   static Future<Directory> getLogsDirectory() async {
     final docsDir = await getApplicationDocumentsDirectory();
     return Directory(path.join(docsDir.path, 'logs'));
   }
 
-  /// Add rotation handling
+  /// Rotates log files if the current log file exceeds the maximum size.
   static Future<void> rotateLogsIfNeeded() async {
     final logFile = await getLogFile();
     if (await logFile.length() > maxLogSize) {
@@ -70,7 +70,7 @@ class LoggerConfig {
     }
   }
 
-  /// Add cleanup method
+  /// Cleans up old log files, keeping only the most recent ones.
   static Future<void> cleanupOldLogs() async {
     final logsDir = await getLogsDirectory();
     final files = await logsDir.list().toList();
@@ -85,7 +85,7 @@ class LoggerConfig {
     }
   }
 
-  /// Rotates log files when size limit is reached
+  /// Rotates log files when size limit is reached.
   static Future<void> _rotateLogFiles() async {
     final logsDir = await getLogsDirectory();
     final logFile = await getLogFile();
@@ -107,4 +107,4 @@ class LoggerConfig {
       path.join(logsDir.path, 'app.1.log'),
     );
   }
-} 
+}

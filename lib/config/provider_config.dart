@@ -8,7 +8,8 @@ import '../providers/ollama_provider.dart';
 import '../config/environment.dart';
 import '../services/logger_service.dart';
 
-/// Provider for SharedPreferences instance
+/// Provider for SharedPreferences instance.
+/// This provider must be overridden in the root ProviderScope.
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) => throw UnimplementedError());
 
 /// Centralizes provider configurations and overrides for the application
@@ -20,22 +21,22 @@ class ProviderConfig {
     LoggerService.debug('Configuring root provider overrides');
     
     final overrides = <Override>[
-      // Core state
+      // Core state providers
       firstRunStateNotifierProvider.overrideWith(
         () => FirstRunStateNotifier(),
       ),
       
-      // Theme configuration
+      // Theme configuration provider
       themeModeNotifierProvider.overrideWith(
         () => ThemeModeNotifier(),
       ),
       
-      // App preferences
+      // App preferences provider
       preferencesNotifierProvider.overrideWith(
         () => PreferencesNotifier(),
       ),
 
-      // Ollama configuration
+      // Ollama configuration provider
       ollamaConfigProvider.overrideWith(
         (ref) => OllamaConfigNotifier(ref.watch(sharedPreferencesProvider)),
       ),
@@ -69,27 +70,32 @@ class ProviderConfig {
       case 'schema':
         overrides.addAll(_getSchemaOverrides(configuration));
         break;
+      default:
+        LoggerService.debug('Unsupported feature: $feature');
+        break;
     }
 
     return overrides;
   }
 
-  /// Returns overrides specific to development environment
+  /// Returns overrides specific to development environment.
+  /// These overrides are used for debugging and testing purposes.
   static List<Override> _getDevelopmentOverrides() {
     LoggerService.debug('Configuring development overrides');
     return [
-      // Development-specific overrides
+      // Force light theme in development for consistency
       themeModeNotifierProvider.overrideWith(
         () => ThemeModeNotifier()..setThemeMode(ThemeMode.light),
       ),
     ];
   }
 
-  /// Returns overrides specific to production environment
+  /// Returns overrides specific to production environment.
+  /// These overrides are used for production-specific configurations.
   static List<Override> _getProductionOverrides() {
     LoggerService.debug('Configuring production overrides');
     return [
-      // Production-specific overrides
+      // Production-specific overrides (if any)
     ];
   }
 
@@ -117,7 +123,8 @@ class ProviderConfig {
     ];
   }
 
-  /// Returns overrides for testing
+  /// Returns overrides for testing purposes.
+  /// This method is used to configure providers with test-specific values.
   @visibleForTesting
   static List<Override> getTestOverrides({
     bool? isFirstRun,
@@ -135,4 +142,4 @@ class ProviderConfig {
         ),
     ];
   }
-} 
+}

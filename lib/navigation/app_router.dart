@@ -13,56 +13,59 @@ import '../config/environment.dart';
 
 /// Global router configuration for the application
 final appRouter = GoRouter(
-  initialLocation: '/',
-  debugLogDiagnostics: Environment.isDevelopment,
+  initialLocation: AppRoutes.home,
+  debugLogDiagnostics: Environment.isDevelopment, // Enable debug logs in development mode
   errorBuilder: (context, state) {
     LoggerService.error(
       'Navigation error',
       error: state.error,
-      data: {'location': state.uri.toString()},
+      data: {
+        'location': state.uri.toString(),
+        'state': state.toString(),
+      },
     );
     return ErrorScreen(error: state.error);
   },
   routes: [
     GoRoute(
-      path: '/',
+      path: AppRoutes.home,
       builder: (context, state) {
-        LoggerService.logNavigation('previous', 'main');
+        LoggerService.logNavigation('previous', AppRoutes.home);
         return const MainScreen();
       },
     ),
     GoRoute(
-      path: '/settings',
+      path: AppRoutes.settings,
       builder: (context, state) {
-        LoggerService.logNavigation('previous', 'settings');
+        LoggerService.logNavigation('previous', AppRoutes.settings);
         return const SettingsScreen();
       },
     ),
     GoRoute(
-      path: '/people',
+      path: AppRoutes.people,
       builder: (context, state) {
-        LoggerService.logNavigation('previous', 'people');
+        LoggerService.logNavigation('previous', AppRoutes.people);
         return const PeopleScreen();
       },
     ),
     GoRoute(
-      path: '/ai',
+      path: AppRoutes.ai,
       builder: (context, state) {
-        LoggerService.logNavigation('previous', 'ai');
+        LoggerService.logNavigation('previous', AppRoutes.ai);
         return const AIScreen();
       },
     ),
     GoRoute(
-      path: '/setup',
+      path: AppRoutes.setup,
       builder: (context, state) {
-        LoggerService.logNavigation('previous', 'setup');
+        LoggerService.logNavigation('previous', AppRoutes.setup);
         return const SetupWorkflowScreen();
       },
     ),
     GoRoute(
-      path: '/error',
+      path: AppRoutes.error,
       builder: (context, state) {
-        LoggerService.logNavigation('previous', 'error');
+        LoggerService.logNavigation('previous', AppRoutes.error);
         return ErrorScreen(error: state.error);
       },
     ),
@@ -72,7 +75,8 @@ final appRouter = GoRouter(
   ],
 );
 
-/// Custom observer for router events
+/// Custom observer for router events.
+/// Tracks navigation events for analytics and logging purposes.
 class GoRouterObserver extends NavigatorObserver {
   final _analytics = NavigationAnalyticsService();
 
@@ -145,4 +149,14 @@ class GoRouterObserver extends NavigatorObserver {
     if (route == null) return 'unknown';
     return route.settings.name ?? route.settings.toString().split(' ').last;
   }
-} 
+}
+
+/// Defines route paths for the application
+class AppRoutes {
+  static const String home = '/';
+  static const String settings = '/settings';
+  static const String people = '/people';
+  static const String ai = '/ai';
+  static const String setup = '/setup';
+  static const String error = '/error';
+}

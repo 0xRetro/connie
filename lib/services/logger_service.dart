@@ -4,24 +4,25 @@ import '../config/environment.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
 
-/// Provides centralized logging functionality with environment awareness
+/// Provides centralized logging functionality with environment awareness.
 class LoggerService {
   static Logger? _logger;
   static int _groupLevel = 0;
 
-  /// Initializes the logger service
+  /// Initializes the logger service.
+  /// This method must be called before using any logging methods.
   static Future<void> initialize() async {
     _logger = await LoggerConfig.createLogger();
   }
 
-  /// Ensures logger is initialized
+  /// Ensures logger is initialized.
   static void _ensureInitialized() {
     if (_logger == null) {
       throw StateError('LoggerService not initialized. Call initialize() first.');
     }
   }
 
-  /// Logs debug messages in development environment
+  /// Logs debug messages in development environment.
   static void debug(String message, {Map<String, dynamic>? data}) {
     _ensureInitialized();
     if (Environment.isDevelopment) {
@@ -29,19 +30,19 @@ class LoggerService {
     }
   }
 
-  /// Logs informational messages
+  /// Logs informational messages.
   static void info(String message, {Map<String, dynamic>? data}) {
     _ensureInitialized();
     _logger!.i(_formatMessage(message, data));
   }
 
-  /// Logs warning messages
+  /// Logs warning messages.
   static void warn(String message, {Map<String, dynamic>? data}) {
     _ensureInitialized();
     _logger!.w(_formatMessage(message, data));
   }
 
-  /// Logs error messages with optional stack traces
+  /// Logs error messages with optional stack traces.
   static void error(
     String message, {
     Map<String, dynamic>? data,
@@ -53,7 +54,7 @@ class LoggerService {
     _logger!.e(formattedMessage, error: error, stackTrace: stackTrace);
   }
 
-  /// Formats log messages with optional metadata
+  /// Formats log messages with optional metadata.
   static String _formatMessage(String message, Map<String, dynamic>? data) {
     final prefix = _groupLevel > 0 ? '│ ' * _groupLevel : '';
     if (data != null) {
@@ -63,7 +64,7 @@ class LoggerService {
     return '$prefix$message';
   }
 
-  /// Sanitizes sensitive data from logs
+  /// Sanitizes sensitive data from logs.
   static Map<String, dynamic> _sanitizeData(Map<String, dynamic> data) {
     return data.map((key, value) {
       if (_isSensitive(key)) {
@@ -73,7 +74,7 @@ class LoggerService {
     });
   }
 
-  /// Checks if a key contains sensitive information
+  /// Checks if a key contains sensitive information.
   static bool _isSensitive(String key) {
     return [
       'password',
@@ -85,29 +86,29 @@ class LoggerService {
     ].any((term) => key.toLowerCase().contains(term));
   }
 
-  /// Starts a new log group
+  /// Starts a new log group.
   static void startGroup(String groupName) {
     _groupLevel++;
     debug('┌── Starting: $groupName');
   }
 
-  /// Ends the current log group
+  /// Ends the current log group.
   static void endGroup(String groupName) {
     debug('└── Ending: $groupName');
     _groupLevel = (_groupLevel - 1).clamp(0, 99);
   }
 
-  /// Logs a performance measurement
+  /// Logs a performance measurement.
   static void logPerformance(String operation, Duration duration) {
     info('Performance: $operation took ${duration.inMilliseconds}ms');
   }
 
-  /// Logs a navigation event
+  /// Logs a navigation event.
   static void logNavigation(String from, String to) {
     debug('Navigation: $from → $to');
   }
 
-  /// Logs a database operation
+  /// Logs a database operation.
   static void logDatabase(
     String operation,
     String table, {
@@ -116,7 +117,7 @@ class LoggerService {
     debug('Database: $operation on $table', data: details);
   }
 
-  /// Rotates log files when size limit is reached
+  /// Rotates log files when size limit is reached.
   static Future<void> rotateLogFiles() async {
     final logsDir = await LoggerConfig.getLogsDirectory();
     final logFile = File(path.join(logsDir.path, 'app.log'));
@@ -144,7 +145,7 @@ class LoggerService {
     }
   }
 
-  /// Cleans up old log files
+  /// Cleans up old log files.
   static Future<void> cleanupOldLogs() async {
     final logsDir = await LoggerConfig.getLogsDirectory();
     final files = await logsDir.list().toList();
@@ -166,7 +167,7 @@ class LoggerService {
     }
   }
 
-  /// Verifies log file exists and is writable
+  /// Verifies log file exists and is writable.
   static Future<void> verifyLogFile() async {
     try {
       final logFile = await LoggerConfig.getLogFile();
@@ -188,4 +189,4 @@ class LoggerService {
       rethrow;
     }
   }
-} 
+}

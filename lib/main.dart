@@ -14,18 +14,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize SharedPreferences
-  final prefs = await SharedPreferences.getInstance();
+  // Initialize SharedPreferences with error handling
+  final prefs = await SharedPreferences.getInstance().catchError((error, stack) {
+    LoggerService.error('Failed to initialize SharedPreferences', error: error, stackTrace: stack);
+    return SharedPreferences.getInstance(); // Fallback or handle accordingly
+  });
   
   try {
-    // Validate environment first
-    Environment.validateEnvironment();
-    Environment.validateDatabaseConfig();
-    Environment.validateOllamaConfig();
-    
+    // Validate environment and configurations
+    try {
+      Environment.validateEnvironment();
+      Environment.validateDatabaseConfig();
+      Environment.validateOllamaConfig();
+    } catch (e, stack) {
+      LoggerService.error('Environment validation failed', error: e, stackTrace: stack);
+      rethrow; // Or handle gracefully
+    }
+
     final progress = InitializationProgress();
     
-    // Initialize logger first for proper debugging
+    // Initialize logger for debugging
     await LoggerService.initialize();
     progress.updateStage('logger');
     LoggerService.info('Starting app bootstrap', data: {
@@ -33,7 +41,7 @@ void main() async {
       'ollamaConfig': Environment.ollamaConfig,
     });
 
-    // Setup progress tracking
+    // Track initialization progress
     progress.currentStage.listen((stage) {
       LoggerService.info(
         'Initialization stage update',
@@ -45,31 +53,41 @@ void main() async {
       );
     });
 
-    // Create the ProviderContainer with overrides
+    // Create ProviderContainer with overrides
     final container = ProviderContainer(
       overrides: [
+        // Override SharedPreferences provider with the initialized instance
         sharedPreferencesProvider.overrideWithValue(prefs),
-        ...ProviderConfig.getRootOverrides(isFirstRun: false), // We'll update this after initialization
+        // Add other root overrides (e.g., for first-run logic)
+        ...ProviderConfig.getRootOverrides(isFirstRun: false),
       ],
     );
 
-    // Initialize core services using the container
+    // Initialize core services
     final isFirstRun = await InitializationService.initialize(container);
     
     // Register app lifecycle hooks
     final lifecycleObserver = LifecycleObserver(
       onDetach: () async {
-        LoggerService.info('App detaching, cleaning up resources');
-        await InitializationService.cleanup(container);
-        progress.dispose();
-        container.dispose();
+        try {
+          LoggerService.info('App detaching, cleaning up resources');
+          await InitializationService.cleanup(container);
+          progress.dispose();
+          container.dispose();
+        } catch (e, stack) {
+          LoggerService.error('Error during app detach', error: e, stackTrace: stack);
+        }
       },
       onPause: () {
         LoggerService.info('App paused');
       },
       onResume: () async {
-        LoggerService.info('App resumed');
-        await InitializationService.verifyServices(container);
+        try {
+          LoggerService.info('App resumed');
+          await InitializationService.verifyServices(container);
+        } catch (e, stack) {
+          LoggerService.error('Error during app resume', error: e, stackTrace: stack);
+        }
       },
     );
     
@@ -77,15 +95,6 @@ void main() async {
     if (!await InitializationService.verifyServices(container)) {
       throw StateError('Service health check failed');
     }
-
-    // Configure global error handling
-    FlutterError.onError = (details) {
-      LoggerService.error(
-        'Flutter error',
-        error: details.exception,
-        stackTrace: details.stack,
-      );
-    };
 
     LoggerService.info('App bootstrap completed', data: {
       'isFirstRun': isFirstRun,
@@ -110,11 +119,10 @@ void main() async {
       ),
     );
 
-    // Setup app termination cleanup
-    final binding = WidgetsFlutterBinding.ensureInitialized();
-    binding.addObserver(lifecycleObserver);
+    // Setup app lifecycle observer
+    WidgetsFlutterBinding.ensureInitialized().addObserver(lifecycleObserver);
     
-    // Register error handlers after app is running
+    // Register global error handler
     FlutterError.onError = (details) {
       LoggerService.error(
         'Flutter error',
