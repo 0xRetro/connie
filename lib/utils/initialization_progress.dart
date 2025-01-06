@@ -47,6 +47,11 @@ class InitializationProgress extends ChangeNotifier {
       isBlocking: true,
     ),
     InitializationStage(
+      name: 'ollama',
+      description: 'Initializing Ollama service',
+      isBlocking: true,
+    ),
+    InitializationStage(
       name: 'setup',
       description: 'Checking first-time setup requirements',
       isBlocking: true,

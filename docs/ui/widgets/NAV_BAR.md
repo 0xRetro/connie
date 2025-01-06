@@ -60,16 +60,39 @@ Does Not:
 
 ## Integration Points
 - Used in BaseLayout for app-wide navigation
+- Used directly in standalone screens
 - Integrates with go_router for navigation
 - Works with theme system
-- Connects with all main screens
 
-## Additional Details
+## Usage Patterns
+
+### In BaseLayout
+The NavBar is the default navigation component in BaseLayout:
+```dart
+BaseLayout(
+  title: 'Screen Title',
+  actions: [/* optional actions */],
+  child: YourContent(),
+)
+```
+
+### In Standalone Screens
+For screens not using BaseLayout:
+```dart
+Scaffold(
+  appBar: NavBar(
+    context: context,
+    title: 'Screen Title',
+    actions: [/* optional actions */],
+  ),
+  body: YourContent(),
+)
+```
 
 ### Navigation Structure
 - Home route ('/')
 - People route ('/people')
-- People Management ('/people/manage')
+- AI Assistant ('/ai')
 - Settings route ('/settings')
 
 ### Props

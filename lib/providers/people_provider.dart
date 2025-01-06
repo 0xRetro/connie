@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../database/database.dart' show AppDatabase, Person, PersonCompanion, databaseProvider;
+import '../database/database.dart' show Person, PersonCompanion, databaseProvider;
 import '../services/logger_service.dart';
 
 part 'people_provider.g.dart';

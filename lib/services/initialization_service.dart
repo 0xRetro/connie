@@ -3,6 +3,7 @@ import '../config/environment.dart';
 import '../services/logger_service.dart';
 import '../services/database_service.dart';
 import '../utils/initialization_progress.dart';
+import '../providers/ollama_provider.dart';
 
 /// Service responsible for coordinating application initialization
 class InitializationService {
@@ -10,29 +11,43 @@ class InitializationService {
   static final _progress = InitializationProgress();
   
   /// Initializes all required services in the correct order
-  static Future<bool> initialize() async {
+  static Future<bool> initialize(ProviderContainer container) async {
     if (_initialized) return false;
     
     try {
+      // Logger initialization
+      _progress.updateStage('logger');
+      LoggerService.info('Starting app bootstrap', data: {
+        'environment': Environment.name,
+        'ollamaConfig': Environment.ollamaConfig,
+      });
+      
       // Platform services initialization
       _progress.updateStage('platform');
       await _initializePlatformServices();
       
       // Database initialization and health check
       _progress.updateStage('database');
-      final dbService = ProviderContainer().read(databaseServiceProvider);
+      final dbService = container.read(databaseServiceProvider);
       await dbService.initialize();
       
       // Check and run migrations if needed
       _progress.updateStage('migration');
-      final needsMigration = await _checkMigrations();
+      final needsMigration = await _checkMigrations(container);
       if (needsMigration) {
-        await _runMigrations();
+        await _runMigrations(container);
+      }
+      
+      // Initialize Ollama service
+      _progress.updateStage('ollama');
+      final ollamaService = container.read(ollamaServiceProvider);
+      if (!await ollamaService.isHealthy()) {
+        LoggerService.warn('Ollama service health check failed during initialization');
       }
       
       // Check if first-time setup is needed
       _progress.updateStage('setup');
-      final isFirstRun = await _checkFirstTimeSetup();
+      final isFirstRun = await _checkFirstTimeSetup(container);
       
       // Non-blocking initializations
       _initializePreferences();
@@ -80,9 +95,9 @@ class InitializationService {
   }
 
   /// Checks if database migrations are needed
-  static Future<bool> _checkMigrations() async {
+  static Future<bool> _checkMigrations(ProviderContainer container) async {
     try {
-      final dbService = ProviderContainer().read(databaseServiceProvider);
+      final dbService = container.read(databaseServiceProvider);
       final metrics = await dbService.checkDatabaseHealth();
       return metrics['needsMigration'] ?? false;
     } catch (e, stack) {
@@ -96,7 +111,7 @@ class InitializationService {
   }
 
   /// Runs necessary database migrations
-  static Future<void> _runMigrations() async {
+  static Future<void> _runMigrations(ProviderContainer container) async {
     try {
       // Run migrations
       LoggerService.info('Running database migrations');
@@ -111,9 +126,9 @@ class InitializationService {
   }
 
   /// Checks if this is the first time the app is run
-  static Future<bool> _checkFirstTimeSetup() async {
+  static Future<bool> _checkFirstTimeSetup(ProviderContainer container) async {
     try {
-      final dbService = ProviderContainer().read(databaseServiceProvider);
+      final dbService = container.read(databaseServiceProvider);
       final metrics = await dbService.checkDatabaseHealth();
       return metrics['isFirstRun'] ?? true;
     } catch (e, stack) {
@@ -141,12 +156,27 @@ class InitializationService {
     }
   }
 
-  /// Verifies all services are healthy
-  static Future<bool> verifyServices() async {
+  /// Verifies that all required services are healthy
+  static Future<bool> verifyServices(ProviderContainer container) async {
     try {
-      final dbService = ProviderContainer().read(databaseServiceProvider);
-      final isHealthy = await dbService.checkDatabaseHealth();
-      return isHealthy['isHealthy'] ?? false;
+      LoggerService.debug('Verifying service health');
+      
+      // Verify database service
+      final dbService = container.read(databaseServiceProvider);
+      final dbHealth = await dbService.checkDatabaseHealth();
+      if (!dbHealth['isHealthy']) {
+        LoggerService.error('Database health check failed', data: dbHealth);
+        return false;
+      }
+      
+      // Verify Ollama service
+      final ollamaService = container.read(ollamaServiceProvider);
+      if (!await ollamaService.isHealthy()) {
+        LoggerService.error('Ollama service health check failed');
+        return false;
+      }
+      
+      return true;
     } catch (e, stack) {
       LoggerService.error(
         'Service verification failed',
@@ -158,10 +188,16 @@ class InitializationService {
   }
 
   /// Cleans up resources during app termination
-  static Future<void> cleanup() async {
+  static Future<void> cleanup(ProviderContainer container) async {
     try {
-      final dbService = ProviderContainer().read(databaseServiceProvider);
+      // Cleanup database
+      final dbService = container.read(databaseServiceProvider);
       await dbService.dispose();
+
+      // Cleanup Ollama service
+      final ollamaService = container.read(ollamaServiceProvider);
+      ollamaService.dispose();
+      
       _initialized = false;
     } catch (e, stack) {
       LoggerService.error(

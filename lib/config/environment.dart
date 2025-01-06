@@ -63,36 +63,48 @@ class Environment {
   static Map<String, dynamic> get ollamaConfig => switch (name) {
     'production' => {
       'baseUrl': 'http://localhost:11434',
-      'defaultModel': 'llama3.2',
-      'maxContextLength': 8192,
-      'defaultTemperature': 0.7,
-      'defaultTopP': 0.9,
-      'defaultTopK': 40,
+      'model': 'llama3.2:latest',
+      'contextLength': 8192,
+      'temperature': 0.7,
+      'topP': 0.9,
+      'topK': 40,
+      'stream': true,
       'connectionTimeout': 30000,
+      'receiveTimeout': 30000,
       'enableDebugLogs': false,
       'trackPerformance': true,
+      'maxRequestsPerMinute': 60,
+      'rateLimitInterval': const Duration(minutes: 1),
     },
     'staging' => {
       'baseUrl': 'http://localhost:11434',
-      'defaultModel': 'llama3.2',
-      'maxContextLength': 8192,
-      'defaultTemperature': 0.7,
-      'defaultTopP': 0.9,
-      'defaultTopK': 40,
+      'model': 'llama3.2:latest',
+      'contextLength': 8192,
+      'temperature': 0.7,
+      'topP': 0.9,
+      'topK': 40,
+      'stream': true,
       'connectionTimeout': 30000,
+      'receiveTimeout': 30000,
       'enableDebugLogs': true,
       'trackPerformance': true,
+      'maxRequestsPerMinute': 60,
+      'rateLimitInterval': const Duration(minutes: 1),
     },
     _ => {
       'baseUrl': 'http://localhost:11434',
-      'defaultModel': 'llama3.2',
-      'maxContextLength': 4096,
-      'defaultTemperature': 0.7,
-      'defaultTopP': 0.9,
-      'defaultTopK': 40,
+      'model': 'llama3.2:latest',
+      'contextLength': 4096,
+      'temperature': 0.7,
+      'topP': 0.9,
+      'topK': 40,
+      'stream': true,
       'connectionTimeout': 30000,
+      'receiveTimeout': 30000,
       'enableDebugLogs': true,
       'trackPerformance': true,
+      'maxRequestsPerMinute': 60,
+      'rateLimitInterval': const Duration(minutes: 1),
     },
   };
 
@@ -124,16 +136,16 @@ class Environment {
   /// Validate Ollama configuration
   static void validateOllamaConfig() {
     final config = ollamaConfig;
-    if (config['maxContextLength'] < 1) {
+    if (config['contextLength'] < 1) {
       throw ArgumentError('Invalid Ollama context length configuration');
     }
-    if (config['defaultTemperature'] < 0 || config['defaultTemperature'] > 1) {
+    if (config['temperature'] < 0 || config['temperature'] > 1) {
       throw ArgumentError('Invalid Ollama temperature configuration');
     }
-    if (config['defaultTopP'] < 0 || config['defaultTopP'] > 1) {
+    if (config['topP'] < 0 || config['topP'] > 1) {
       throw ArgumentError('Invalid Ollama top-p configuration');
     }
-    if (config['defaultTopK'] < 1) {
+    if (config['topK'] < 1) {
       throw ArgumentError('Invalid Ollama top-k configuration');
     }
     if (config['connectionTimeout'] < 1000) {

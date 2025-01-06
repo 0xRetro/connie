@@ -26,7 +26,7 @@ class ResponsiveLayout extends StatelessWidget {
         const ResponsiveBreakpoint.resize(1000, name: DESKTOP),
       ],
       background: Container(
-        color: Theme.of(context).colorScheme.background,
+        color: Theme.of(context).colorScheme.surface,
       ),
     );
   }

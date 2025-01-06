@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../layout/base_layout.dart';
 import '../widgets/header_widget.dart';
 import '../widgets/nav_bar.dart';
 import '../widgets/error_boundary.dart';
@@ -124,7 +123,7 @@ class PeopleScreen extends ConsumerWidget {
         ),
       ),
       data: (people) => people.isEmpty
-        ? Center(
+        ? const Center(
             child: Text(
               'No people found',
               style: kBodyText,

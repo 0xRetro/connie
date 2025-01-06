@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:responsive_framework/responsive_framework.dart' show ResponsiveWrapper, TABLET;
 import '../widgets/error_boundary.dart';
+import '../widgets/nav_bar.dart';
 import 'responsive_layout.dart';
 import 'spacing_constants.dart';
 import 'typography_styles.dart';
@@ -44,10 +45,9 @@ class BaseLayout extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        centerTitle: true,
-        automaticallyImplyLeading: showBackButton,
+      appBar: NavBar(
+        context: context,
+        title: title,
         actions: actions,
       ),
       body: SafeArea(

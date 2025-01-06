@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/ollama_provider.dart';
+import '../../config/ollama_config.dart';
+import '../../services/errors.dart';
+import '../../services/logger_service.dart';
 import '../layout/spacing_constants.dart';
 import '../layout/typography_styles.dart';
 
@@ -12,32 +15,115 @@ class OllamaSettingsCard extends ConsumerStatefulWidget {
 }
 
 class _OllamaSettingsCardState extends ConsumerState<OllamaSettingsCard> {
-  late final TextEditingController _urlController;
-  late final TextEditingController _modelController;
-  late final TextEditingController _tempController;
-  late final TextEditingController _contextController;
+  late TextEditingController _urlController;
+  late TextEditingController _modelController;
+  late TextEditingController _tempController;
+  late TextEditingController _contextController;
+  // ignore: unused_field
   bool _isEditing = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeControllers();
+    final config = ref.read(ollamaConfigProvider);
+    _urlController = TextEditingController(text: config.baseUrl);
+    _modelController = TextEditingController(text: config.model);
+    _tempController = TextEditingController(text: config.temperature.toString());
+    _contextController = TextEditingController(text: config.connectionTimeout.toString());
   }
 
-  void _initializeControllers() {
-    final config = ref.read(ollamaConfigProvider).valueOrNull;
-    _urlController = TextEditingController(text: config?.baseUrl ?? 'http://localhost:11434');
-    _modelController = TextEditingController(text: config?.model ?? 'llama2');
-    _tempController = TextEditingController(text: (config?.temperature ?? 0.7).toString());
-    _contextController = TextEditingController(text: (config?.contextLength ?? 4096).toString());
+  void _resetSettings() {
+    final config = const OllamaConfig();
+    _urlController.text = config.baseUrl;
+    _modelController.text = config.model;
+    _tempController.text = config.temperature.toString();
+    _contextController.text = config.connectionTimeout.toString();
+    setState(() => _isEditing = false);
+    
+    // Reset config to defaults
+    final notifier = ref.read(ollamaConfigProvider.notifier);
+    notifier.resetToDefaults();
   }
 
-  void _updateControllersFromConfig(config) {
-    if (!_isEditing) {
-      _urlController.text = config.baseUrl;
-      _modelController.text = config.model;
-      _tempController.text = config.temperature.toString();
-      _contextController.text = config.contextLength.toString();
+  /// Save the current settings
+  Future<void> _saveSettings() async {
+    final currentContext = context;
+    final scaffoldMessenger = ScaffoldMessenger.of(currentContext);
+    setState(() => _isEditing = false);
+    
+    try {
+      // Validate URL format
+      var baseUrl = _urlController.text.trim();
+      if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+        baseUrl = 'http://$baseUrl';
+      }
+      // Remove trailing slashes
+      baseUrl = baseUrl.replaceAll(RegExp(r'/+$'), '');
+
+      // Validate model name
+      final model = _modelController.text.trim();
+      if (model.isEmpty) {
+        throw const ValidationError(
+          'Model name cannot be empty',
+          field: 'model',
+        );
+      }
+
+      // Validate temperature
+      final temperature = double.tryParse(_tempController.text);
+      if (temperature == null || temperature < 0 || temperature > 1) {
+        throw ValidationError(
+          'Temperature must be between 0 and 1',
+          field: 'temperature',
+          value: _tempController.text,
+        );
+      }
+
+      // Validate timeout
+      final timeout = int.tryParse(_contextController.text);
+      if (timeout == null || timeout < 1000) {
+        throw ValidationError(
+          'Timeout must be at least 1000ms',
+          field: 'timeout',
+          value: _contextController.text,
+        );
+      }
+
+      LoggerService.debug('Saving Ollama settings', data: {
+        'baseUrl': baseUrl,
+        'model': model,
+        'temperature': temperature,
+        'timeout': timeout,
+      });
+
+      // Update config
+      final notifier = ref.read(ollamaConfigProvider.notifier);
+      await notifier.updateConfig(
+        baseUrl: baseUrl,
+        model: model,
+        temperature: temperature,
+        connectionTimeout: timeout,
+      );
+
+      if (currentContext.mounted) {
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Text('Settings saved'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 
@@ -52,181 +138,130 @@ class _OllamaSettingsCardState extends ConsumerState<OllamaSettingsCard> {
 
   @override
   Widget build(BuildContext context) {
-    final configAsync = ref.watch(ollamaConfigProvider);
-    final notifier = ref.read(ollamaConfigProvider.notifier);
-
-    ref.listen(ollamaConfigProvider, (previous, next) {
-      next.whenData((config) => _updateControllersFromConfig(config));
-    });
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(kSpacingMedium),
-        child: configAsync.when(
-          data: (config) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Ollama Settings', style: kHeadline3),
-                    IconButton(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: () async {
-                        setState(() => _isEditing = false);
-                        await notifier.resetToDefaults();
-                        await notifier.saveSettings();
-                      },
-                      tooltip: 'Reset to defaults',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: kSpacingMedium),
-                Focus(
-                  onFocusChange: (hasFocus) => setState(() => _isEditing = hasFocus),
-                  child: TextFormField(
-                    controller: _urlController,
-                    decoration: const InputDecoration(
-                      labelText: 'Base URL',
-                      helperText: 'The URL where Ollama is running',
-                    ),
-                    onChanged: (value) {
-                      setState(() => _isEditing = true);
-                      notifier.updateBaseUrl(value);
-                    },
-                  ),
-                ),
-                const SizedBox(height: kSpacingMedium),
-                Focus(
-                  onFocusChange: (hasFocus) => setState(() => _isEditing = hasFocus),
-                  child: TextFormField(
-                    controller: _modelController,
-                    decoration: const InputDecoration(
-                      labelText: 'Model Name',
-                      helperText: 'The name of the Ollama model to use',
-                    ),
-                    onChanged: (value) {
-                      setState(() => _isEditing = true);
-                      notifier.updateModelName(value);
-                    },
-                  ),
-                ),
-                const SizedBox(height: kSpacingMedium),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Focus(
-                        onFocusChange: (hasFocus) => setState(() => _isEditing = hasFocus),
-                        child: TextFormField(
-                          controller: _tempController,
-                          decoration: const InputDecoration(
-                            labelText: 'Temperature',
-                            helperText: 'Controls randomness (0.0 - 1.0)',
-                          ),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          onChanged: (value) {
-                            setState(() => _isEditing = true);
-                            final temp = double.tryParse(value);
-                            if (temp != null) notifier.updateTemperature(temp);
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: kSpacingMedium),
-                    Expanded(
-                      child: Focus(
-                        onFocusChange: (hasFocus) => setState(() => _isEditing = hasFocus),
-                        child: TextFormField(
-                          controller: _contextController,
-                          decoration: const InputDecoration(
-                            labelText: 'Context Length',
-                            helperText: 'Maximum context length',
-                          ),
-                          keyboardType: TextInputType.number,
-                          onChanged: (value) {
-                            setState(() => _isEditing = true);
-                            final length = int.tryParse(value);
-                            if (length != null) notifier.updateContextLength(length);
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: kSpacingLarge),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () async {
-                        final isConnected = await notifier.testConnection();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                isConnected 
-                                  ? 'Successfully connected to Ollama'
-                                  : 'Failed to connect to Ollama',
-                              ),
-                              backgroundColor: isConnected ? Colors.green : Colors.red,
-                            ),
-                          );
-                        }
-                      },
-                      child: const Text('Test Connection'),
-                    ),
-                    const SizedBox(width: kSpacingMedium),
-                    FilledButton(
-                      onPressed: () async {
-                        try {
-                          setState(() => _isEditing = false);
-                          await notifier.saveSettings();
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Settings saved successfully'),
-                                backgroundColor: Colors.green,
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Failed to save settings: $e'),
-                                backgroundColor: Colors.red,
-                                duration: const Duration(seconds: 3),
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      child: const Text('Save Settings'),
-                    ),
-                  ],
+                Text('Ollama Settings', style: kHeadline3),
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _resetSettings,
+                  tooltip: 'Reset to defaults',
                 ),
               ],
-            );
-          },
-          loading: () => const Center(
-            child: Padding(
-              padding: EdgeInsets.all(kSpacingLarge),
-              child: CircularProgressIndicator(),
             ),
-          ),
-          error: (error, stack) => Padding(
-            padding: const EdgeInsets.all(kSpacingMedium),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: kSpacingMedium),
+            Focus(
+              onFocusChange: (hasFocus) => setState(() => _isEditing = hasFocus),
+              child: TextFormField(
+                controller: _urlController,
+                decoration: const InputDecoration(
+                  labelText: 'Base URL',
+                  helperText: 'The URL where Ollama is running',
+                ),
+                onChanged: (value) {
+                  setState(() => _isEditing = true);
+                },
+              ),
+            ),
+            const SizedBox(height: kSpacingMedium),
+            Focus(
+              onFocusChange: (hasFocus) => setState(() => _isEditing = hasFocus),
+              child: TextFormField(
+                controller: _modelController,
+                decoration: const InputDecoration(
+                  labelText: 'Model Name',
+                  helperText: 'The name of the Ollama model to use',
+                ),
+                onChanged: (value) {
+                  setState(() => _isEditing = true);
+                },
+              ),
+            ),
+            const SizedBox(height: kSpacingMedium),
+            Row(
               children: [
-                const Text('Error loading Ollama settings:', style: TextStyle(color: Colors.red)),
-                const SizedBox(height: kSpacingSmall),
-                Text(error.toString(), style: const TextStyle(color: Colors.red)),
+                Expanded(
+                  child: Focus(
+                    onFocusChange: (hasFocus) => setState(() => _isEditing = hasFocus),
+                    child: TextFormField(
+                      controller: _tempController,
+                      decoration: const InputDecoration(
+                        labelText: 'Temperature',
+                        helperText: 'Controls randomness (0.0 - 1.0)',
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (value) {
+                        setState(() => _isEditing = true);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(width: kSpacingMedium),
+                Expanded(
+                  child: Focus(
+                    onFocusChange: (hasFocus) => setState(() => _isEditing = hasFocus),
+                    child: TextFormField(
+                      controller: _contextController,
+                      decoration: const InputDecoration(
+                        labelText: 'Connection Timeout',
+                        helperText: 'Connection timeout in ms',
+                      ),
+                      keyboardType: TextInputType.number,
+                      onChanged: (value) {
+                        setState(() => _isEditing = true);
+                      },
+                    ),
+                  ),
+                ),
               ],
             ),
-          ),
+            const SizedBox(height: kSpacingLarge),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () async {
+                    final service = ref.read(ollamaServiceProvider);
+                    try {
+                      await service.testConnection();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Successfully connected to Ollama'),
+                            backgroundColor: Colors.green,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                    }
+                    } catch (e) {
+                      if (context.mounted) {
+                        final message = e.toString().replaceAll('Exception: ', '');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(message),
+                            backgroundColor: Colors.red,
+                            duration: const Duration(seconds: 4),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Test Connection'),
+                ),
+                const SizedBox(width: kSpacingMedium),
+                FilledButton(
+                  onPressed: _saveSettings,
+                  child: const Text('Save Settings'),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

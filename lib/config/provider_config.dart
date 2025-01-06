@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:meta/meta.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/first_run_provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/app_preferences_provider.dart';
+import '../providers/ollama_provider.dart';
 import '../config/environment.dart';
 import '../services/logger_service.dart';
+
+/// Provider for SharedPreferences instance
+final sharedPreferencesProvider = Provider<SharedPreferences>((ref) => throw UnimplementedError());
 
 /// Centralizes provider configurations and overrides for the application
 class ProviderConfig {
@@ -29,6 +33,11 @@ class ProviderConfig {
       // App preferences
       preferencesNotifierProvider.overrideWith(
         () => PreferencesNotifier(),
+      ),
+
+      // Ollama configuration
+      ollamaConfigProvider.overrideWith(
+        (ref) => OllamaConfigNotifier(ref.watch(sharedPreferencesProvider)),
       ),
     ];
 

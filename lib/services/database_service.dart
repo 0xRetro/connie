@@ -54,7 +54,7 @@ class DatabaseService {
           },
         );
         
-        await Future.delayed(Duration(milliseconds: _retryDelay));
+        await Future.delayed(const Duration(milliseconds: _retryDelay));
       }
     }
   }

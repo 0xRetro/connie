@@ -1,61 +1,43 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
+//import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:uuid/uuid.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
+//import 'package:flutter_riverpod/flutter_riverpod.dart';
+//import 'package:uuid/uuid.dart';
 import 'package:retry/retry.dart';
 
 import '../config/ollama_config.dart';
-import '../config/ollama_service_config.dart';
+import '../models/ollama_response.dart';
 import '../services/logger_service.dart';
 import 'rate_limiter.dart';
 import 'errors.dart';
 
-part 'ollama_service.freezed.dart';
-part 'ollama_service.g.dart';
-
-@freezed
-class OllamaResponse with _$OllamaResponse {
-  const factory OllamaResponse({
-    required String model,
-    required String response,
-    required bool done,
-    double? totalDuration,
-    double? loadDuration,
-    double? promptEvalCount,
-    double? evalCount,
-    double? evalDuration,
-  }) = _OllamaResponse;
-
-  factory OllamaResponse.fromJson(Map<String, dynamic> json) =>
-      _$OllamaResponseFromJson(json);
-}
-
 /// Service for interacting with Ollama API
 class OllamaService {
+  final OllamaConfig config;
+  final Dio _dio;
+  final RateLimiter _rateLimiter;
+  bool _isDisposed = false;
+
   OllamaService({
     required this.config,
-    Dio? dio,
-  }) : _dio = dio ?? Dio() {
+  }) : _dio = Dio(BaseOptions(
+          baseUrl: config.baseUrl,
+          connectTimeout: Duration(milliseconds: config.connectionTimeout),
+          receiveTimeout: Duration(milliseconds: config.connectionTimeout),
+          sendTimeout: Duration(milliseconds: config.connectionTimeout),
+        )),
+        _rateLimiter = RateLimiter(
+          maxRequests: config.maxRequestsPerMinute,
+          interval: config.rateLimitInterval,
+        ) {
+    _validateConfig(config);
     LoggerService.debug('Initializing OllamaService', data: {
       'baseUrl': config.baseUrl,
       'model': config.model,
-      'modelFromConfig': config.model,
     });
-
-    _dio.options.baseUrl = config.baseUrl;
-    _dio.options.headers = {
-      'Content-Type': 'application/json',
-    };
-    _dio.options.connectTimeout = Duration(
-      milliseconds: config.connectionTimeout,
-    );
-    _dio.options.receiveTimeout = Duration(
-      milliseconds: config.connectionTimeout,
-    );
 
     if (config.enableDebugLogs) {
       _dio.interceptors.add(LogInterceptor(
@@ -65,103 +47,257 @@ class OllamaService {
       ));
     }
 
-    // Add rate limiting interceptor
+    // Configure Dio with better defaults
+    _dio.options = BaseOptions(
+      baseUrl: config.baseUrl,
+      connectTimeout: Duration(milliseconds: config.connectionTimeout),
+      receiveTimeout: Duration(milliseconds: config.connectionTimeout),
+      sendTimeout: Duration(milliseconds: config.connectionTimeout),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      validateStatus: (status) => 
+        status != null && status >= 200 && status < 300,
+      responseType: ResponseType.json,
+      listFormat: ListFormat.multiCompatible,
+    );
+
+    // Add logging interceptor with better formatting
+    _dio.interceptors.add(LogInterceptor(
+      requestBody: true,
+      responseBody: true,
+      logPrint: (obj) {
+        if (obj is Map || obj is List) {
+          LoggerService.debug('Dio: ${const JsonEncoder.withIndent('  ').convert(obj)}');
+        } else {
+          LoggerService.debug('Dio: $obj');
+        }
+      },
+      error: true,
+      request: true,
+      requestHeader: true,
+      responseHeader: true,
+    ));
+
+    // Add retry interceptor
     _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) {
-          if (!_rateLimiter.tryAcquire()) {
+      QueuedInterceptorsWrapper(
+        onRequest: (options, handler) async {
+          if (_isDisposed) {
+            handler.reject(
+              DioException(
+                requestOptions: options,
+                error: 'Service is disposed',
+                type: DioExceptionType.cancel,
+              ),
+            );
+            return;
+          }
+
+          if (!_rateLimiter.checkLimit()) {
             handler.reject(
               DioException(
                 requestOptions: options,
                 error: RateLimitError(
                   'Rate limit exceeded',
-                  retryAfter: const Duration(minutes: 1),
+                  retryAfter: config.rateLimitInterval,
                 ),
+                type: DioExceptionType.cancel,
               ),
             );
             return;
           }
+
           handler.next(options);
+        },
+        onError: (error, handler) async {
+          if (_isDisposed) {
+            handler.reject(error);
+            return;
+          }
+
+          if (error.type == DioExceptionType.connectionTimeout ||
+              error.type == DioExceptionType.sendTimeout ||
+              error.type == DioExceptionType.receiveTimeout) {
+            // Add exponential backoff for timeouts
+            final retryCount = error.requestOptions.extra['retryCount'] as int? ?? 0;
+            if (retryCount < 3) {
+              final delay = Duration(milliseconds: (math.pow(2, retryCount) * 1000).toInt());
+              await Future.delayed(delay);
+
+              final options = error.requestOptions;
+              options.extra['retryCount'] = retryCount + 1;
+
+              try {
+                final response = await _dio.fetch(options);
+                handler.resolve(response);
+                return;
+              } catch (e) {
+                handler.reject(error);
+                return;
+              }
+            }
+          }
+
+          handler.reject(error);
         },
       ),
     );
   }
 
-  final OllamaServiceConfig config;
-  final Dio _dio;
-  final _uuid = const Uuid();
-  final _rateLimiter = RateLimiter(
-    maxRequests: OllamaConfig.rateLimiting['maxRequestsPerMinute'] as int,
-    interval: const Duration(minutes: 1),
-  );
+  /// Validates the Ollama configuration
+  void _validateConfig(OllamaConfig config) {
+    if (config.baseUrl.isEmpty) {
+      throw const ConfigError('Base URL cannot be empty');
+    }
+    if (config.model.isEmpty) {
+      throw const ConfigError('Model name cannot be empty');
+    }
+    if (config.temperature < 0 || config.temperature > 1) {
+      throw const ConfigError('Temperature must be between 0 and 1');
+    }
+    if (config.topP < 0 || config.topP > 1) {
+      throw const ConfigError('Top P must be between 0 and 1');
+    }
+    if (config.topK < 1) {
+      throw const ConfigError('Top K must be greater than 0');
+    }
+    if (config.connectionTimeout < 1000) {
+      throw const ConfigError('Connection timeout must be at least 1000ms');
+    }
+  }
 
-  /// Generate a response for the given prompt
-  Future<OllamaResponse> generate({
-    required String prompt,
-    Map<String, dynamic>? context,
-    bool? stream,
-  }) async {
+  /// Checks if the Ollama server is healthy
+  Future<bool> isHealthy() async {
     try {
-      LoggerService.debug('Generating response', data: {
-        'model': config.model,
-        'stream': stream ?? config.stream,
-      });
+      await testConnection();
+      return true;
+    } catch (e) {
+      LoggerService.error('Health check failed', error: e);
+      return false;
+    }
+  }
 
-      final startTime = DateTime.now();
+  /// Dispose of the service and cleanup resources
+  void dispose() {
+    _isDisposed = true;
+    _dio.close(force: true);
+  }
 
-      final response = await retry(
-        () => _dio.post(
-          '/api/generate',
-          data: {
-            'model': config.model,
-            'prompt': prompt,
-            'context': context,
-            'stream': stream ?? config.stream,
-            'options': {
-              'temperature': config.temperature,
-              'top_p': config.topP,
-              'top_k': config.topK,
-            },
-          },
-        ),
-        retryIf: (e) => e is DioException && e.type != DioExceptionType.cancel,
-        maxAttempts: OllamaConfig.maxRetries,
-      );
+  /// Test the connection to the Ollama server
+  Future<void> testConnection() async {
+    LoggerService.debug('Testing connection to Ollama server', data: {
+      'baseUrl': config.baseUrl,
+      'timeout': config.connectionTimeout,
+    });
 
-      final result = OllamaResponse.fromJson(response.data);
-      final duration = DateTime.now().difference(startTime);
+    try {
+      // First try OpenAI-compatible endpoint
+      if (config.baseUrl.endsWith('/v1')) {
+        final response = await _dio.get(
+          '/models',
+          options: Options(
+            validateStatus: (status) => status != null && status >= 200 && status < 300,
+            responseType: ResponseType.json,
+          ),
+        );
+        
+        if (response.statusCode != 200) {
+          throw ApiError(
+            'Ollama server returned status code: ${response.statusCode}',
+            endpoint: '/models',
+            statusCode: response.statusCode,
+          );
+        }
 
-      if (config.trackPerformance) {
-        LoggerService.logPerformance('generate', duration);
+        final models = response.data['data'] as List?;
+        if (models == null || models.isEmpty) {
+          throw const ConfigError('No models available on the server');
+        }
+
+        LoggerService.debug('Successfully connected to Ollama server (OpenAI-compatible)', data: {
+          'models': models.map((m) => m['id']).toList(),
+        });
+        return;
       }
 
-      LoggerService.debug('Generated response', data: {
-        'totalDuration': result.totalDuration,
-        'evalCount': result.evalCount,
-      });
+      // Try native Ollama endpoint
+      final response = await _dio.get(
+        '/api/tags',
+        options: Options(
+          validateStatus: (status) => status != null && status >= 200 && status < 300,
+          responseType: ResponseType.json,
+        ),
+      );
+      
+      if (response.statusCode != 200) {
+        throw ApiError(
+          'Ollama server returned status code: ${response.statusCode}',
+          endpoint: '/api/tags',
+          statusCode: response.statusCode,
+        );
+      }
 
-      return result;
-    } on DioException catch (e, stack) {
-      LoggerService.error(
-        'Failed to generate response',
-        error: e,
-        data: {'model': config.model},
-      );
-      throw ApiError(
-        'Failed to generate response',
-        statusCode: e.response?.statusCode,
-        endpoint: '/api/generate',
-        originalError: e,
-        stackTrace: stack,
-      );
+      final models = response.data['models'] as List?;
+      if (models == null || models.isEmpty) {
+        throw const ConfigError('No models available on the server');
+      }
+
+      LoggerService.debug('Successfully connected to Ollama server', data: {
+        'models': models,
+      });
     } catch (e, stack) {
-      LoggerService.error(
-        'Failed to generate response',
-        error: e,
-        data: {'model': config.model},
-      );
-      throw ConfigError(
-        'Failed to generate response',
+      LoggerService.error('Failed to connect to Ollama server', error: e);
+      
+      if (e is DioException) {
+        switch (e.type) {
+          case DioExceptionType.connectionTimeout:
+          case DioExceptionType.sendTimeout:
+          case DioExceptionType.receiveTimeout:
+            throw ApiError(
+              'Connection timed out. Please check if Ollama is running.',
+              endpoint: '/api/tags',
+              statusCode: e.response?.statusCode,
+              originalError: e,
+              stackTrace: stack,
+            );
+          case DioExceptionType.connectionError:
+            throw ApiError(
+              'Could not connect to Ollama. Please check if it is running at ${config.baseUrl}',
+              endpoint: '/api/tags',
+              originalError: e,
+              stackTrace: stack,
+            );
+          case DioExceptionType.badResponse:
+            final statusCode = e.response?.statusCode;
+            if (statusCode == 404) {
+              throw ConfigError(
+                'Ollama API endpoint not found. Please check the server URL.',
+                originalError: e,
+                stackTrace: stack,
+              );
+            }
+            throw ApiError(
+              'Ollama server returned an error: $statusCode - ${e.response?.data}',
+              endpoint: '/api/tags',
+              statusCode: statusCode,
+              originalError: e,
+              stackTrace: stack,
+            );
+          default:
+            throw ApiError(
+              'Failed to connect to Ollama: ${e.message}',
+              endpoint: '/api/tags',
+              originalError: e,
+              stackTrace: stack,
+            );
+        }
+      }
+
+      throw ApiError(
+        'Failed to connect to Ollama: $e',
+        endpoint: '/api/tags',
         originalError: e,
         stackTrace: stack,
       );
@@ -169,203 +305,156 @@ class OllamaService {
   }
 
   /// Generate a streaming response for the given prompt
+  ///
+  /// [prompt] The input text to send to the model
+  /// [context] Optional context from previous interactions
+  /// [cancelToken] Optional token for cancelling the request
+  ///
+  /// Throws:
+  /// - [ApiError] for API-related errors
+  /// - [StreamError] for streaming-related errors
+  /// - [ConfigError] for configuration issues
+  /// - [RateLimitError] when rate limit is exceeded
   Stream<OllamaResponse> generateStream({
     required String prompt,
     Map<String, dynamic>? context,
+    CancelToken? cancelToken,
   }) async* {
-    LoggerService.debug('Starting stream generation', data: {
+    if (prompt.trim().isEmpty) {
+      throw ConfigError('Prompt cannot be empty');
+    }
+
+    // Check rate limit
+    if (!_rateLimiter.checkLimit()) {
+      final retryAfter = _rateLimiter.timeUntilNextWindow();
+      throw RateLimitError(
+        'Rate limit exceeded',
+        retryAfter: retryAfter,
+      );
+    }
+
+    final endpoint = config.baseUrl.endsWith('/v1') 
+        ? '/chat/completions'
+        : '/api/generate';
+
+    final startTime = DateTime.now();
+    LoggerService.debug('Generating stream response', data: {
       'model': config.model,
+      'prompt': prompt,
+      'endpoint': endpoint,
+      'hasContext': context != null,
     });
 
-    final uri = Uri.parse('${config.baseUrl}/api/generate');
-    WebSocketChannel? channel;
-    final startTime = DateTime.now();
-
+    Response<ResponseBody>? response;
+    Stream<List<int>>? responseStream;
+    
     try {
-      channel = WebSocketChannel.connect(uri);
+      response = await retry(
+        () => _dio.post<ResponseBody>(
+          endpoint,
+          data: config.baseUrl.endsWith('/v1')
+              ? {
+                  'model': config.model,
+                  'messages': [
+                    {'role': 'user', 'content': prompt}
+                  ],
+                  'stream': config.stream,
+                  'temperature': config.temperature,
+                  'top_p': config.topP,
+                  'top_k': config.topK,
+                }
+              : {
+                  'model': config.model,
+                  'prompt': prompt,
+                  'stream': config.stream,
+                  'temperature': config.temperature,
+                  'top_p': config.topP,
+                  'top_k': config.topK,
+                },
+          options: Options(
+            responseType: ResponseType.stream,
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+          ),
+          cancelToken: cancelToken,
+        ),
+        retryIf: (e) => e is DioError && e.type != DioErrorType.cancel,
+        maxAttempts: 3,
+      );
 
-      LoggerService.debug('Sending chat request', data: {
-        'model': config.model,
-        'prompt': prompt,
-        'context': context,
-        'options': {
-          'temperature': config.temperature,
-          'top_p': config.topP,
-          'top_k': config.topK,
-        },
-      });
+      if (response?.statusCode != 200) {
+        throw ApiError(
+          'HTTP Error ${response?.statusCode}',
+          endpoint: endpoint,
+          statusCode: response?.statusCode,
+        );
+      }
 
-      channel.sink.add(jsonEncode({
-        'model': config.model,
-        'prompt': prompt,
-        'context': context,
-        'stream': true,
-        'options': {
-          'temperature': config.temperature,
-          'top_p': config.topP,
-          'top_k': config.topK,
-        },
-      }));
+      responseStream = response?.data?.stream;
+      if (responseStream == null) {
+        throw StreamError(
+          'No response stream available',
+          connectionUrl: '${config.baseUrl}$endpoint',
+        );
+      }
 
-      await for (final message in channel.stream) {
-        try {
-          final data = jsonDecode(message as String);
-          yield OllamaResponse.fromJson(data);
-        } catch (e, stack) {
-          throw ParseError(
-            'Failed to parse stream response',
-            responseData: message.toString(),
-            originalError: e,
-            stackTrace: stack,
-          );
+      String buffer = '';
+      await for (final chunk in responseStream.asBroadcastStream()) {
+        buffer += utf8.decode(chunk);
+        
+        while (buffer.contains('\n')) {
+          final index = buffer.indexOf('\n');
+          final line = buffer.substring(0, index).trim();
+          buffer = buffer.substring(index + 1);
+
+          if (line.isEmpty) continue;
+
+          LoggerService.debug('Received chunk', data: {
+            'chunk': line,
+          });
+
+          try {
+            final json = jsonDecode(line);
+            final ollamaResponse = OllamaResponse.fromJson(json);
+            
+            if (ollamaResponse.response.isNotEmpty || ollamaResponse.done) {
+              yield ollamaResponse;
+            }
+
+            if (ollamaResponse.done) {
+              final endTime = DateTime.now();
+              final duration = endTime.difference(startTime);
+              LoggerService.info('Stream completed', data: {
+                'duration': duration.inMilliseconds,
+                'metrics': ollamaResponse.metrics,
+              });
+
+              if (config.trackPerformance) {
+                LoggerService.logPerformance('generateStream', duration);
+              }
+              return;
+            }
+          } catch (e, stack) {
+            LoggerService.error(
+              'Error parsing response',
+              error: e,
+              stackTrace: stack,
+              data: {'line': line},
+            );
+            continue;
+          }
         }
       }
-
-      if (config.trackPerformance) {
-        final duration = DateTime.now().difference(startTime);
-        LoggerService.logPerformance('generateStream', duration);
+    } on DioError catch (e) {
+      if (e.type == DioErrorType.cancel) {
+        LoggerService.debug('Request cancelled');
+        return;
       }
-    } catch (e, stack) {
-      LoggerService.error(
-        'Stream generation failed',
-        error: e,
-        data: {'model': config.model},
-      );
-      throw StreamError(
-        'Stream generation failed',
-        connectionUrl: uri.toString(),
-        originalError: e,
-        stackTrace: stack,
-      );
+      rethrow;
     } finally {
-      LoggerService.debug('Closing stream connection');
-      channel?.sink.close();
+      // Stream is already consumed, no need to drain
     }
   }
-
-  /// Create a new agent
-  Future<void> createAgent({
-    required String name,
-    required String systemPrompt,
-    Map<String, dynamic>? metadata,
-  }) async {
-    try {
-      LoggerService.debug('Creating agent', data: {
-        'name': name,
-        'model': config.model,
-      });
-
-      await retry(
-        () => _dio.post(
-          '/api/agents',
-          data: {
-            'name': name,
-            'model': config.model,
-            'system_prompt': systemPrompt,
-            'metadata': metadata ?? {},
-          },
-        ),
-        retryIf: (e) => e is DioException && e.type != DioExceptionType.cancel,
-        maxAttempts: OllamaConfig.maxRetries,
-      );
-
-      LoggerService.info('Agent created successfully', data: {
-        'name': name,
-      });
-    } catch (e, stack) {
-      LoggerService.error(
-        'Failed to create agent',
-        error: e,
-        data: {'name': name},
-      );
-      throw ApiError(
-        'Failed to create agent',
-        endpoint: '/api/agents',
-        originalError: e,
-        stackTrace: stack,
-      );
-    }
-  }
-
-  /// Get agent details
-  Future<Map<String, dynamic>> getAgent(String name) async {
-    try {
-      LoggerService.debug('Fetching agent', data: {'name': name});
-      final response = await retry(
-        () => _dio.get('/api/agents/$name'),
-        retryIf: (e) => e is DioException && e.type != DioExceptionType.cancel,
-        maxAttempts: OllamaConfig.maxRetries,
-      );
-      return response.data;
-    } catch (e, stack) {
-      LoggerService.error(
-        'Failed to get agent',
-        error: e,
-        data: {'name': name},
-      );
-      throw ApiError(
-        'Failed to get agent',
-        endpoint: '/api/agents/$name',
-        originalError: e,
-        stackTrace: stack,
-      );
-    }
-  }
-
-  /// List all agents
-  Future<List<Map<String, dynamic>>> listAgents() async {
-    try {
-      LoggerService.debug('Listing agents');
-      final response = await retry(
-        () => _dio.get('/api/agents'),
-        retryIf: (e) => e is DioException && e.type != DioExceptionType.cancel,
-        maxAttempts: OllamaConfig.maxRetries,
-      );
-      return List<Map<String, dynamic>>.from(response.data['agents']);
-    } catch (e, stack) {
-      LoggerService.error('Failed to list agents', error: e);
-      throw ApiError(
-        'Failed to list agents',
-        endpoint: '/api/agents',
-        originalError: e,
-        stackTrace: stack,
-      );
-    }
-  }
-
-  /// Delete an agent
-  Future<void> deleteAgent(String name) async {
-    try {
-      LoggerService.debug('Deleting agent', data: {'name': name});
-      await retry(
-        () => _dio.delete('/api/agents/$name'),
-        retryIf: (e) => e is DioException && e.type != DioExceptionType.cancel,
-        maxAttempts: OllamaConfig.maxRetries,
-      );
-      LoggerService.info('Agent deleted successfully', data: {'name': name});
-    } catch (e, stack) {
-      LoggerService.error(
-        'Failed to delete agent',
-        error: e,
-        data: {'name': name},
-      );
-      throw ApiError(
-        'Failed to delete agent',
-        endpoint: '/api/agents/$name',
-        originalError: e,
-        stackTrace: stack,
-      );
-    }
-  }
-}
-
-final ollamaConfigProvider = Provider<OllamaServiceConfig>((ref) {
-  LoggerService.debug('Creating Ollama config provider');
-  return OllamaServiceConfig.fromGlobalConfig();
-});
-
-final ollamaServiceProvider = Provider<OllamaService>((ref) {
-  LoggerService.debug('Creating Ollama service provider');
-  final config = ref.watch(ollamaConfigProvider);
-  return OllamaService(config: config);
-}); 
+} 

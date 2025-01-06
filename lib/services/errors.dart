@@ -1,124 +1,146 @@
-/// Base class for service-related errors.
-/// 
-/// This class provides a common base for all service errors, including
-/// proper error message handling and stack trace support.
-abstract class ServiceError implements Exception {
-  /// Creates a new service error.
-  ServiceError(this.message, {this.originalError, this.stackTrace});
-
-  /// The error message describing what went wrong.
+/// Base error class for all application errors
+abstract class AppError implements Exception {
   final String message;
-
-  /// The original error that caused this error, if any.
-  final dynamic originalError;
-
-  /// The stack trace where the error occurred.
+  final Object? originalError;
   final StackTrace? stackTrace;
 
+  const AppError(
+    this.message, {
+    this.originalError,
+    this.stackTrace,
+  });
+
   @override
-  String toString() => 'ServiceError: $message';
+  String toString() => '${runtimeType}: $message';
 }
 
-/// Error during API communication.
-/// 
-/// This error occurs when there are issues communicating with an API endpoint,
-/// such as network errors, invalid responses, or server errors.
+/// Base class for service-specific errors
+abstract class ServiceError extends AppError {
+  const ServiceError(
+    super.message, {
+    super.originalError,
+    super.stackTrace,
+  });
+}
+
+/// Error for API request failures
 class ApiError extends ServiceError {
-  /// Creates a new API error.
-  ApiError(
-    String message, {
-    this.statusCode,
-    this.endpoint,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(message, originalError: originalError, stackTrace: stackTrace);
-
-  /// The HTTP status code of the failed request, if available.
   final int? statusCode;
+  final String endpoint;
 
-  /// The API endpoint that was being accessed.
-  final String? endpoint;
+  const ApiError(
+    super.message, {
+    required this.endpoint,
+    this.statusCode,
+    super.originalError,
+    super.stackTrace,
+  });
 
   @override
-  String toString() => 'ApiError: $message (Status: $statusCode, Endpoint: $endpoint)';
+  String toString() => 'ApiError: $message (Endpoint: $endpoint, Status: $statusCode)';
 }
 
-/// Error during WebSocket communication.
-/// 
-/// This error occurs when there are issues with WebSocket connections,
-/// such as connection failures, message parsing errors, or disconnections.
-class StreamError extends ServiceError {
-  /// Creates a new stream error.
-  StreamError(
-    String message, {
-    this.connectionUrl,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(message, originalError: originalError, stackTrace: stackTrace);
+/// Error for configuration issues
+class ConfigError extends ServiceError {
+  const ConfigError(
+    super.message, {
+    super.originalError,
+    super.stackTrace,
+  });
+}
 
-  /// The WebSocket URL that was being connected to.
-  final String? connectionUrl;
+/// Error for rate limiting
+class RateLimitError extends ServiceError {
+  final Duration retryAfter;
+
+  const RateLimitError(
+    super.message, {
+    required this.retryAfter,
+    super.originalError,
+    super.stackTrace,
+  });
+
+  @override
+  String toString() => 'RateLimitError: $message (Retry after: $retryAfter)';
+}
+
+/// Error for stream operations
+class StreamError extends ServiceError {
+  final String connectionUrl;
+
+  const StreamError(
+    super.message, {
+    required this.connectionUrl,
+    super.originalError,
+    super.stackTrace,
+  });
 
   @override
   String toString() => 'StreamError: $message (URL: $connectionUrl)';
 }
 
-/// Error during response parsing.
-/// 
-/// This error occurs when there are issues parsing API responses,
-/// such as invalid JSON, missing required fields, or type mismatches.
+/// Error for parsing responses
 class ParseError extends ServiceError {
-  /// Creates a new parse error.
-  ParseError(
-    String message, {
-    this.responseData,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(message, originalError: originalError, stackTrace: stackTrace);
+  final String responseData;
 
-  /// The raw response data that failed to parse.
-  final String? responseData;
+  const ParseError(
+    super.message, {
+    required this.responseData,
+    super.originalError,
+    super.stackTrace,
+  });
 
   @override
-  String toString() => 'ParseError: $message';
+  String toString() => 'ParseError: $message (Response: $responseData)';
 }
 
-/// Error during rate limiting.
-/// 
-/// This error occurs when a service has exceeded its rate limit
-/// and needs to wait before making more requests.
-class RateLimitError extends ServiceError {
-  /// Creates a new rate limit error.
-  RateLimitError(
-    String message, {
-    this.retryAfter,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(message, originalError: originalError, stackTrace: stackTrace);
+/// Error for database operations
+class DatabaseError extends ServiceError {
+  final String operation;
+  final String? table;
 
-  /// The duration to wait before retrying the request.
-  final Duration? retryAfter;
+  const DatabaseError(
+    super.message, {
+    required this.operation,
+    this.table,
+    super.originalError,
+    super.stackTrace,
+  });
 
   @override
-  String toString() => 'RateLimitError: $message (Retry After: $retryAfter)';
+  String toString() => 'DatabaseError: $message (Operation: $operation${table != null ? ', Table: $table' : ''})';
 }
 
-/// Error during configuration.
-/// 
-/// This error occurs when there are issues with service configuration,
-/// such as missing required values, invalid settings, or initialization failures.
-class ConfigError extends ServiceError {
-  /// Creates a new configuration error.
-  ConfigError(
-    String message, {
-    this.configKey,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(message, originalError: originalError, stackTrace: stackTrace);
+/// Error for UI rendering issues
+class UIError extends AppError {
+  final String? widget;
+  final String? screen;
 
-  /// The configuration key that caused the error.
-  final String? configKey;
+  const UIError(
+    super.message, {
+    this.widget,
+    this.screen,
+    super.originalError,
+    super.stackTrace,
+  });
 
   @override
-  String toString() => 'ConfigError: $message (Config Key: $configKey)';
+  String toString() => 'UIError: $message${widget != null ? ' (Widget: $widget)' : ''}${screen != null ? ' (Screen: $screen)' : ''}';
+}
+
+/// Error for business logic validation
+class ValidationError extends AppError {
+  final String field;
+  final String? value;
+
+  const ValidationError(
+    super.message, {
+    required this.field,
+    this.value,
+    super.originalError,
+    super.stackTrace,
+  });
+
+  @override
+  String toString() => 'ValidationError: $message (Field: $field${value != null ? ', Value: $value' : ''})';
 } 

@@ -1,15 +1,13 @@
+@TestOn('vm')
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:connie/services/initialization/database_initializer.dart';
 import 'package:connie/services/logger_service.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:drift_dev/api/migrations.dart';
-import 'package:sqlite3/sqlite3.dart';
 
 /// A simple executor user for database initialization
 class _DatabaseInitializerExecutorUser extends QueryExecutorUser {
@@ -57,7 +55,6 @@ class MockPathProviderPlatform with MockPlatformInterfaceMixin implements PathPr
   Future<String?> getExternalStoragePath() async => p.join(testDir.path, 'external');
 }
 
-@TestOn('vm')
 void main() {
   late Directory tempDir;
   late Directory testDir;

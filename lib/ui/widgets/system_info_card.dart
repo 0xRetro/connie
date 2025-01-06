@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:io' show Platform, Directory;
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -20,7 +20,7 @@ class SystemInfoCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('System Information', style: kHeadline2),
+            const Text('System Information', style: kHeadline2),
             const SizedBox(height: kSpacingMedium),
             
             // Environment Information
@@ -29,12 +29,9 @@ class SystemInfoCard extends ConsumerWidget {
               [
                 _buildInfoRow('Mode', Environment.isDevelopment ? 'Development' : 'Production'),
                 _buildInfoRow('Environment', Environment.name),
-                if (Environment.showDebugInfo != null)
-                  _buildInfoRow('Debug Info', Environment.showDebugInfo ? 'Enabled' : 'Disabled'),
-                if (Environment.enableFileLogging != null)
-                  _buildInfoRow('File Logging', Environment.enableFileLogging ? 'Enabled' : 'Disabled'),
-                if (Environment.enableAnalytics != null)
-                  _buildInfoRow('Analytics', Environment.enableAnalytics ? 'Enabled' : 'Disabled'),
+                _buildInfoRow('Debug Info', Environment.showDebugInfo ? 'Enabled' : 'Disabled'),
+                _buildInfoRow('File Logging', Environment.enableFileLogging ? 'Enabled' : 'Disabled'),
+                _buildInfoRow('Analytics', Environment.enableAnalytics ? 'Enabled' : 'Disabled'),
                 if (!kIsWeb) FutureBuilder<String>(
                   future: _getLogsDirectory(),
                   builder: (context, snapshot) {
@@ -53,10 +50,8 @@ class SystemInfoCard extends ConsumerWidget {
             _buildSection(
               'Application',
               [
-                if (Environment.appVersion != null)
-                  _buildInfoRow('Version', Environment.appVersion),
-                if (Environment.apiEndpoint != null)
-                  _buildInfoRow('API Endpoint', Environment.apiEndpoint),
+                _buildInfoRow('Version', Environment.appVersion),
+                _buildInfoRow('API Endpoint', Environment.apiEndpoint),
                 _buildInfoRow('Platform', _getPlatformInfo()),
                 if (!kIsWeb) _buildInfoRow('OS Version', _getOSVersion()),
                 _buildInfoRow('Dart Version', _getDartVersion()),
@@ -84,36 +79,36 @@ class SystemInfoCard extends ConsumerWidget {
             const SizedBox(height: kSpacingMedium),
 
             // Database Information
-            if (Environment.databaseConfig != null) ...[
-              _buildSection(
-                'Database',
-                [
-                  if (Environment.databaseConfig['maxConnections'] != null)
-                    _buildInfoRow('Max Connections', 
-                      Environment.databaseConfig['maxConnections'].toString()),
-                  if (Environment.databaseConfig['enableCache'] != null)
-                    _buildInfoRow('Cache Enabled', 
-                      Environment.databaseConfig['enableCache'] ? 'Yes' : 'No'),
-                  if (Environment.databaseConfig['logQueries'] != null)
-                    _buildInfoRow('Query Logging', 
-                      Environment.databaseConfig['logQueries'] ? 'Enabled' : 'Disabled'),
-                  if (Environment.databaseConfig['storagePath'] != null)
-                    _buildInfoRow('Storage Path', Environment.databaseConfig['storagePath']),
-                  if (Environment.databaseConfig['enableBackup'] != null)
-                    _buildInfoRow('Backup Enabled', 
-                      Environment.databaseConfig['enableBackup'] ? 'Yes' : 'No'),
-                  if (!kIsWeb) FutureBuilder<String>(
-                    future: _getDatabasePath(),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData) {
-                        return _buildInfoRow('Database File', snapshot.data!);
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-                ],
-              ),
-            ],
+            ...[
+            _buildSection(
+              'Database',
+              [
+                if (Environment.databaseConfig['maxConnections'] != null)
+                  _buildInfoRow('Max Connections', 
+                    Environment.databaseConfig['maxConnections'].toString()),
+                if (Environment.databaseConfig['enableCache'] != null)
+                  _buildInfoRow('Cache Enabled', 
+                    Environment.databaseConfig['enableCache'] ? 'Yes' : 'No'),
+                if (Environment.databaseConfig['logQueries'] != null)
+                  _buildInfoRow('Query Logging', 
+                    Environment.databaseConfig['logQueries'] ? 'Enabled' : 'Disabled'),
+                if (Environment.databaseConfig['storagePath'] != null)
+                  _buildInfoRow('Storage Path', Environment.databaseConfig['storagePath']),
+                if (Environment.databaseConfig['enableBackup'] != null)
+                  _buildInfoRow('Backup Enabled', 
+                    Environment.databaseConfig['enableBackup'] ? 'Yes' : 'No'),
+                if (!kIsWeb) FutureBuilder<String>(
+                  future: _getDatabasePath(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      return _buildInfoRow('Database File', snapshot.data!);
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ],
+            ),
+          ],
           ],
         ),
       ),

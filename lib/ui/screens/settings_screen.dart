@@ -22,7 +22,7 @@ class SettingsScreen extends ConsumerWidget {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: ResponsiveSpacing.getPadding(context),
-          child: ErrorBoundary(
+          child: const ErrorBoundary(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -30,15 +30,15 @@ class SettingsScreen extends ConsumerWidget {
                   'Settings',
                   style: kHeadline1,
                 ),
-                const SizedBox(height: kSpacingMedium),
+                SizedBox(height: kSpacingMedium),
                 Text(
                   'Configure application preferences and view system information',
                   style: kBodyText,
                 ),
-                const SizedBox(height: kSpacingLarge),
-                const OllamaSettingsCard(),
-                const SizedBox(height: kSpacingMedium),
-                const SystemInfoCard(),
+                SizedBox(height: kSpacingLarge),
+                OllamaSettingsCard(),
+                SizedBox(height: kSpacingMedium),
+                SystemInfoCard(),
               ],
             ),
           ),

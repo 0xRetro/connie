@@ -1,180 +1,81 @@
-import 'package:flutter/foundation.dart';
-import '../config/environment.dart';
-import '../services/logger_service.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'environment.dart';
 
-/// Manages Ollama-specific configuration settings and initialization.
-/// Provides environment-aware configuration for the Ollama integration.
-/// This class cannot be instantiated and provides only static access.
+part 'ollama_config.freezed.dart';
+part 'ollama_config.g.dart';
 
-/// Configuration for Ollama integration
-class OllamaConfig {
-  // Make constructor private to prevent instantiation
-  OllamaConfig._();
+/// Configuration for the Ollama service
+///
+/// Contains all settings required for interacting with an Ollama instance,
+/// including connection details, model parameters, and performance settings.
+@freezed
+class OllamaConfig with _$OllamaConfig {
+  /// Creates a new Ollama configuration instance
+  /// 
+  /// Default values are loaded from [Environment.ollamaConfig]
+  const factory OllamaConfig({
+    /// Base URL of the Ollama server
+    @Default('http://localhost:11434') String baseUrl,
+    
+    /// Model to use for generation
+    @Default('llama3.2:latest') String model,
+    
+    /// Context length for the model
+    @Default(4096) int contextLength,
+    
+    /// Temperature for response generation (0.0 to 1.0)
+    /// Higher values make output more random
+    @Default(0.7) double temperature,
+    
+    /// Top-p sampling parameter (0.0 to 1.0)
+    /// Controls diversity of responses
+    @Default(0.9) double topP,
+    
+    /// Top-k sampling parameter
+    /// Limits vocabulary for response generation
+    @Default(40) int topK,
+    
+    /// Whether to use streaming responses
+    /// Recommended for chat interfaces
+    @Default(true) bool stream,
+    
+    /// Connection timeout in milliseconds
+    /// Defaults to 30 seconds
+    @Default(30000) int connectionTimeout,
+    
+    /// Whether to track performance metrics
+    @Default(true) bool trackPerformance,
+    
+    /// Whether to enable debug logging
+    @Default(true) bool enableDebugLogs,
+    
+    /// Maximum requests per minute
+    @Default(60) int maxRequestsPerMinute,
+    
+    /// Interval for rate limiting requests
+    @Default(Duration(minutes: 1)) Duration rateLimitInterval,
+  }) = _OllamaConfig;
 
-  /// Initialize and validate configuration
-  static void initialize() {
-    LoggerService.startGroup('Initializing Ollama configuration');
-    try {
-      _validateConfiguration();
-      LoggerService.info('Ollama configuration initialized successfully', data: {
-        'baseUrl': baseUrl,
-        'model': defaultModel,
-        'environment': Environment.name,
-      });
-    } catch (e) {
-      LoggerService.error('Failed to initialize Ollama configuration', error: e);
-      rethrow;
-    } finally {
-      LoggerService.endGroup('Initializing Ollama configuration');
-    }
-  }
-
-  /// Validate configuration values
-  static void _validateConfiguration() {
-    if (defaultTemperature < 0 || defaultTemperature > 1) {
-      throw ArgumentError('Temperature must be between 0 and 1');
-    }
-    if (defaultTopP < 0 || defaultTopP > 1) {
-      throw ArgumentError('Top-p must be between 0 and 1');
-    }
-    if (defaultTopK < 1) {
-      throw ArgumentError('Top-k must be greater than 0');
-    }
-    if (maxContextLength < 1) {
-      throw ArgumentError('Context length must be greater than 0');
-    }
-    if (connectionTimeout < 1000) {
-      throw ArgumentError('Connection timeout must be at least 1000ms');
-    }
-    if (agentConfig['maxAgents'] < 1) {
-      throw ArgumentError('Maximum agents must be greater than 0');
-    }
-    if (workflowConfig['maxWorkflows'] < 1) {
-      throw ArgumentError('Maximum workflows must be greater than 0');
-    }
-    if (templateConfig['maxTemplates'] < 1) {
-      throw ArgumentError('Maximum templates must be greater than 0');
-    }
-  }
-
-  /// Base URL for Ollama API
-  static String get baseUrl => switch (Environment.name) {
-    'production' => const String.fromEnvironment(
-      'OLLAMA_API_URL',
-      defaultValue: 'http://localhost:11434',
-    ),
-    'staging' => const String.fromEnvironment(
-      'OLLAMA_API_URL',
-      defaultValue: 'http://localhost:11434',
-    ),
-    _ => 'http://localhost:11434',
-  };
-
-  /// Default model to use
-  static String get defaultModel => const String.fromEnvironment(
-    'OLLAMA_MODEL',
-    defaultValue: 'llama3.2',
-  );
-
-  /// Maximum context length
-  static int get maxContextLength => const int.fromEnvironment(
-    'OLLAMA_MAX_CONTEXT_LENGTH',
-    defaultValue: 4096,
-  );
-
-  /// Default temperature for generation
-  static double get defaultTemperature {
-    final value = const String.fromEnvironment(
-      'OLLAMA_TEMPERATURE',
-      defaultValue: '0.7',
+  /// Creates a configuration from JSON
+  factory OllamaConfig.fromJson(Map<String, dynamic> json) => 
+      _$OllamaConfigFromJson(json);
+      
+  /// Creates a configuration from environment settings
+  factory OllamaConfig.fromEnvironment() {
+    final config = Environment.ollamaConfig;
+    return OllamaConfig(
+      baseUrl: config['baseUrl'] as String? ?? 'http://localhost:11434',
+      model: config['model'] as String? ?? 'llama3.2:latest',
+      contextLength: config['contextLength'] as int? ?? 4096,
+      temperature: config['temperature'] as double? ?? 0.7,
+      topP: config['topP'] as double? ?? 0.9,
+      topK: config['topK'] as int? ?? 40,
+      stream: config['stream'] as bool? ?? true,
+      connectionTimeout: config['connectionTimeout'] as int? ?? 30000,
+      trackPerformance: config['trackPerformance'] as bool? ?? true,
+      enableDebugLogs: config['enableDebugLogs'] as bool? ?? true,
+      maxRequestsPerMinute: config['maxRequestsPerMinute'] as int? ?? 60,
+      rateLimitInterval: config['rateLimitInterval'] as Duration? ?? const Duration(minutes: 1),
     );
-    return double.tryParse(value) ?? 0.7;
   }
-
-  /// Default top_p for generation
-  static double get defaultTopP {
-    final value = const String.fromEnvironment(
-      'OLLAMA_TOP_P',
-      defaultValue: '0.9',
-    );
-    return double.tryParse(value) ?? 0.9;
-  }
-
-  /// Default top_k for generation
-  static int get defaultTopK => const int.fromEnvironment(
-    'OLLAMA_TOP_K',
-    defaultValue: 40,
-  );
-
-  /// Whether to enable streaming by default
-  static bool get defaultStreamMode => const bool.fromEnvironment(
-    'OLLAMA_STREAM_MODE',
-    defaultValue: true,
-  );
-
-  /// Connection timeout in milliseconds
-  static int get connectionTimeout => const int.fromEnvironment(
-    'OLLAMA_CONNECTION_TIMEOUT',
-    defaultValue: 30000,
-  );
-
-  /// Maximum retries for failed requests
-  static int get maxRetries => const int.fromEnvironment(
-    'OLLAMA_MAX_RETRIES',
-    defaultValue: 3,
-  );
-
-  /// Whether to enable debug logging
-  static bool get enableDebugLogs => Environment.isDevelopment;
-
-  /// Whether to enable performance tracking
-  static bool get trackPerformance => Environment.isDevelopment;
-
-  /// Rate limiting configuration
-  static Map<String, dynamic> get rateLimiting => {
-    'enabled': const bool.fromEnvironment(
-      'OLLAMA_RATE_LIMITING_ENABLED',
-      defaultValue: true,
-    ),
-    'maxRequestsPerMinute': const int.fromEnvironment(
-      'OLLAMA_MAX_REQUESTS_PER_MINUTE',
-      defaultValue: 60,
-    ),
-  };
-
-  /// Agent configuration
-  static Map<String, dynamic> get agentConfig => {
-    'maxAgents': const int.fromEnvironment(
-      'OLLAMA_MAX_AGENTS',
-      defaultValue: 10,
-    ),
-    'maxConversationHistory': const int.fromEnvironment(
-      'OLLAMA_MAX_CONVERSATION_HISTORY',
-      defaultValue: 100,
-    ),
-  };
-
-  /// Workflow configuration
-  static Map<String, dynamic> get workflowConfig => {
-    'maxWorkflows': const int.fromEnvironment(
-      'OLLAMA_MAX_WORKFLOWS',
-      defaultValue: 20,
-    ),
-    'maxStepsPerWorkflow': const int.fromEnvironment(
-      'OLLAMA_MAX_STEPS_PER_WORKFLOW',
-      defaultValue: 10,
-    ),
-  };
-
-  /// Template configuration
-  static Map<String, dynamic> get templateConfig => {
-    'maxTemplates': const int.fromEnvironment(
-      'OLLAMA_MAX_TEMPLATES',
-      defaultValue: 50,
-    ),
-    'maxVariablesPerTemplate': const int.fromEnvironment(
-      'OLLAMA_MAX_VARIABLES_PER_TEMPLATE',
-      defaultValue: 20,
-    ),
-  };
 } 

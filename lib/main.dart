@@ -9,9 +9,13 @@ import 'services/logger_service.dart';
 import 'config/provider_config.dart';
 import 'utils/lifecycle_observer.dart';
 import 'utils/initialization_progress.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize SharedPreferences
+  final prefs = await SharedPreferences.getInstance();
   
   try {
     // Validate environment first
@@ -40,28 +44,37 @@ void main() async {
         },
       );
     });
-    
-    // Initialize core services
-    final isFirstRun = await InitializationService.initialize();
+
+    // Create the ProviderContainer with overrides
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        ...ProviderConfig.getRootOverrides(isFirstRun: false), // We'll update this after initialization
+      ],
+    );
+
+    // Initialize core services using the container
+    final isFirstRun = await InitializationService.initialize(container);
     
     // Register app lifecycle hooks
     final lifecycleObserver = LifecycleObserver(
       onDetach: () async {
         LoggerService.info('App detaching, cleaning up resources');
-        await InitializationService.cleanup();
+        await InitializationService.cleanup(container);
         progress.dispose();
+        container.dispose();
       },
       onPause: () {
         LoggerService.info('App paused');
       },
       onResume: () async {
         LoggerService.info('App resumed');
-        await InitializationService.verifyServices();
+        await InitializationService.verifyServices(container);
       },
     );
     
     // Verify services are healthy before continuing
-    if (!await InitializationService.verifyServices()) {
+    if (!await InitializationService.verifyServices(container)) {
       throw StateError('Service health check failed');
     }
 
@@ -83,9 +96,10 @@ void main() async {
     // Run the app with proper provider configuration
     runApp(
       ProviderScope(
-        overrides: ProviderConfig.getRootOverrides(
-          isFirstRun: isFirstRun,
-        ),
+        parent: container,
+        overrides: [
+          ...ProviderConfig.getRootOverrides(isFirstRun: isFirstRun),
+        ],
         child: MaterialApp.router(
           builder: (context, child) => ResponsiveLayout(child: child!),
           routerConfig: appRouter,

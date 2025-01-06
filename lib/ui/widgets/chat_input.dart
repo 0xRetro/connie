@@ -49,44 +49,39 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
       ),
       child: Row(
         children: [
           Expanded(
             child: TextField(
               controller: _controller,
+              enabled: !ollamaState.isLoading,
               onChanged: (text) {
                 setState(() {
                   _isComposing = text.isNotEmpty;
                 });
               },
-              onSubmitted: _isComposing ? _handleSubmitted : null,
+              onSubmitted: _handleSubmitted,
               decoration: InputDecoration(
-                hintText: 'Type a message...',
+                hintText: ollamaState.isLoading 
+                  ? 'Waiting for response...' 
+                  : 'Type a message...',
                 contentPadding: const EdgeInsets.all(kSpacingMedium),
                 border: InputBorder.none,
-                enabled: !ollamaState.isLoading,
               ),
             ),
           ),
-          const SizedBox(width: kSpacingSmall),
           IconButton(
-            icon: ollamaState.isLoading
-              ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Icon(
-                  Icons.send,
-                  color: _isComposing ? kPrimaryColor : Colors.grey,
-                ),
-            onPressed: !_isComposing || ollamaState.isLoading
-              ? null
-              : () => _handleSubmitted(_controller.text),
+            icon: Icon(
+              Icons.send,
+              color: _isComposing && !ollamaState.isLoading
+                ? kPrimaryColor
+                : Colors.grey,
+            ),
+            onPressed: _isComposing && !ollamaState.isLoading
+              ? () => _handleSubmitted(_controller.text)
+              : null,
           ),
-          const SizedBox(width: kSpacingSmall),
         ],
       ),
     );

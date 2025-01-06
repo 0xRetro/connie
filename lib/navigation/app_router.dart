@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../providers/first_run_provider.dart';
 import '../ui/screens/main_screen.dart';
 import '../ui/screens/settings_screen.dart';
 import '../ui/screens/people_screen.dart';

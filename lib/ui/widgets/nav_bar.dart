@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../layout/color_palette.dart';
-import '../layout/typography_styles.dart';
-import '../layout/spacing_constants.dart';
 
 /// A navigation bar widget that provides consistent navigation across the app
 /// 

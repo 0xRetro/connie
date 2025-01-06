@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
-import '../layout/base_layout.dart';
+//import '../layout/base_layout.dart';
 import '../widgets/header_widget.dart';
 import '../widgets/error_boundary.dart';
 import '../widgets/nav_bar.dart';
@@ -74,9 +74,9 @@ class MainScreen extends ConsumerWidget {
   }
 
   Widget _buildMainContent(BuildContext context) {
-    return Card(
+    return const Card(
       child: Padding(
-        padding: const EdgeInsets.all(kSpacingMedium),
+        padding: EdgeInsets.all(kSpacingMedium),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -84,13 +84,13 @@ class MainScreen extends ConsumerWidget {
               'Getting Started',
               style: kHeadline3,
             ),
-            const SizedBox(height: kSpacingMedium),
+            SizedBox(height: kSpacingMedium),
             Text(
               'Connie is your AI-powered assistant, ready to help you with your tasks.',
               style: kBodyText,
             ),
-            const SizedBox(height: kSpacingMedium),
-            const _QuickStartGuide(),
+            SizedBox(height: kSpacingMedium),
+            _QuickStartGuide(),
           ],
         ),
       ),

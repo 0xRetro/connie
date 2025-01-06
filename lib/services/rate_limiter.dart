@@ -11,79 +11,51 @@
 ///   interval: Duration(minutes: 1),
 /// );
 ///
-/// if (limiter.tryAcquire()) {
+/// if (limiter.checkLimit()) {
 ///   // Make API request
 /// } else {
-///   final waitTime = limiter.timeUntilNextToken;
+///   final waitTime = limiter.timeUntilNextWindow();
 ///   print('Rate limit exceeded. Try again in $waitTime');
 /// }
 /// ```
 class RateLimiter {
-  /// Creates a new rate limiter.
-  /// 
-  /// [maxRequests] is the maximum number of requests allowed per [interval].
-  /// [interval] is the time period after which the tokens are fully replenished.
+  final int maxRequests;
+  final Duration interval;
+  final _timestamps = <DateTime>[];
+
   RateLimiter({
     required this.maxRequests,
     required this.interval,
-  }) : _lastRefill = DateTime.now(),
-       _tokens = maxRequests;
+  });
 
-  /// Maximum number of requests allowed per interval
-  final int maxRequests;
-
-  /// Time period for token replenishment
-  final Duration interval;
-
-  /// Current number of available tokens
-  int _tokens;
-
-  /// Timestamp of the last token refill
-  DateTime _lastRefill;
-
-  /// Attempts to acquire a token for making a request.
-  /// 
-  /// Returns true if a token was acquired, false otherwise.
-  bool tryAcquire() {
-    _refillTokens();
-    if (_tokens > 0) {
-      _tokens--;
-      return true;
-    }
-    return false;
-  }
-
-  /// Refills the token bucket based on the time passed since last refill.
-  void _refillTokens() {
+  /// Checks if a request can be made within the current rate limit window
+  bool checkLimit() {
     final now = DateTime.now();
-    final timePassed = now.difference(_lastRefill);
-    if (timePassed >= interval) {
-      _tokens = maxRequests;
-      _lastRefill = now;
+    _timestamps.removeWhere(
+      (timestamp) => now.difference(timestamp) > interval,
+    );
+    if (_timestamps.length >= maxRequests) {
+      return false;
     }
+    _timestamps.add(now);
+    return true;
   }
 
-  /// Returns the duration until the next token becomes available.
-  /// 
-  /// Returns Duration.zero if tokens are currently available.
-  Duration? get timeUntilNextToken {
-    _refillTokens();
-    if (_tokens > 0) return Duration.zero;
-    final timePassed = DateTime.now().difference(_lastRefill);
-    return interval - timePassed;
+  /// Returns the duration until the next rate limit window
+  Duration timeUntilNextWindow() {
+    if (_timestamps.isEmpty) return Duration.zero;
+    
+    final now = DateTime.now();
+    final oldestTimestamp = _timestamps.reduce(
+      (a, b) => a.isBefore(b) ? a : b,
+    );
+    
+    final timeUntilExpiry = interval - now.difference(oldestTimestamp);
+    return timeUntilExpiry.isNegative ? Duration.zero : timeUntilExpiry;
   }
 
-  /// Returns the current number of available tokens.
-  int get availableTokens {
-    _refillTokens();
-    return _tokens;
-  }
-
-  /// Resets the rate limiter to its initial state.
-  /// 
-  /// This will restore all tokens and reset the last refill timestamp.
+  /// Clears all timestamps, effectively resetting the rate limiter
   void reset() {
-    _tokens = maxRequests;
-    _lastRefill = DateTime.now();
+    _timestamps.clear();
   }
 } 

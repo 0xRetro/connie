@@ -1,93 +1,72 @@
-# Ollama Configuration
+# OllamaConfig
 
-Manages configuration settings and environment-specific values for Ollama integration.
+Configuration management for Ollama service settings, providing a single source of truth for all Ollama-related configuration.
 
 ## File Location
 `lib/config/ollama_config.dart`
 
 ## Key Patterns & Principles
-- Singleton pattern (private constructor)
-- Environment-aware configuration
-- Static configuration provider
-- Validation-first initialization
-- Comprehensive logging
+- Immutable configuration using Freezed
+- Default values for all settings
+- Type-safe configuration
+- Single source of truth pattern
+- Serializable for persistence
 
 ## Responsibilities
 Does:
-- Provide Ollama-specific configuration values
-- Validate configuration at initialization
-- Handle environment-specific settings
-- Manage rate limiting parameters
-- Configure agent and workflow settings
-- Provide template management settings
+- Store Ollama connection settings
+- Store model configuration
+- Store performance settings
+- Provide default values
+- Support JSON serialization
 
 Does Not:
-- Handle API calls
-- Manage state
-- Implement business logic
-- Handle authentication
-- Process model responses
+- Handle persistence (managed by providers)
+- Validate server connection (handled by service)
+- Manage state updates (handled by provider)
+- Handle API communication
 
 ## Component Connections
 - [x] Config Layer
-  - [x] Environment
-  - [ ] Theme
-  - [ ] Routes
+  - [x] Environment Variables
   - [x] Constants
-- [x] Service Layer
-  - [ ] Database
-  - [ ] API
-  - [x] Logger
-  - [x] Initialization
-- [ ] State Layer
-  - [ ] Providers
-  - [ ] Notifiers
-  - [ ] Models
+- [ ] Service Layer
+- [x] State Layer
+  - [x] OllamaConfigNotifier
 - [ ] UI Layer
-  - [ ] Screens
-  - [ ] Widgets
-  - [ ] Layouts
 - [ ] Util Layer
-  - [ ] Helpers
-  - [ ] Extensions
-  - [ ] Types
 
 ## Execution Pattern
-- [x] Has Initialization Order
-  1. Environment validation
-  2. Configuration initialization
-  3. Configuration validation
-  4. Logger setup
+- [ ] Has Initialization Order
+- [x] Has No Specific Order
+  - Can be instantiated at any time
+  - Immutable after creation
+  - No initialization requirements
 
 ## Dependencies
-- `environment.dart`: Environment-specific configuration
-- `logger_service.dart`: Logging functionality
+- `freezed_annotation`: For immutable class generation
+- `json_serializable`: For JSON serialization
 
 ## Integration Points
-- `lib/config/environment.dart`: Provides environment context
-- `lib/services/logger_service.dart`: Logging integration
-- `lib/providers/ollama_provider.dart`: Consumes configuration
-- `lib/services/ollama_service.dart`: Uses configuration for API setup
+- `lib/services/ollama_service.dart`: Uses config for service setup
+- `lib/providers/ollama_provider.dart`: Manages config state
+- `lib/ui/widgets/ollama_settings_card.dart`: UI for config modification
 
 ## Additional Details
 
 ### Configuration
-- Default values provided for all settings
-- Environment-specific overrides available
-- Comprehensive validation rules
-- Debug mode tied to environment
-
-### State Management
-- Static getters ensure consistent access
-- No mutable state
-- Environment-aware value resolution
-
-### Services
-- Logging integration for debugging
-- Initialization validation
-- Error handling with specific messages
-
-### UI Integration
-- Settings exposed for UI configuration
-- Rate limiting parameters available
-- Template and workflow limits defined 
+```dart
+@freezed
+class OllamaConfig with _$OllamaConfig {
+  const factory OllamaConfig({
+    @Default('http://localhost:11434') String baseUrl,
+    @Default('llama2:latest') String model,
+    @Default(0.7) double temperature,
+    @Default(0.9) double topP,
+    @Default(40) int topK,
+    @Default(true) bool stream,
+    @Default(30000) int connectionTimeout,
+    @Default(true) bool trackPerformance,
+    @Default(const Duration(minutes: 1)) Duration rateLimitInterval,
+  }) = _OllamaConfig;
+} 
