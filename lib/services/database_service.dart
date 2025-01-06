@@ -88,23 +88,6 @@ class DatabaseService {
     });
   }
 
-  /// Creates a database backup
-  Future<void> createBackup() async {
-    await _withRetry('create_backup', () async {
-      await _db.backup();
-      LoggerService.info('Database backup completed');
-    });
-  }
-
-  /// Restores database from backup
-  Future<void> restoreFromBackup(String backupPath) async {
-    await _withRetry('restore_backup', () async {
-      final backupFile = File(backupPath);
-      await _db.restoreFromBackup(backupFile);
-      LoggerService.info('Database restored from backup');
-    });
-  }
-
   /// Gets the database instance
   AppDatabase get database => _db;
 }
@@ -249,33 +232,6 @@ class DatabaseInitializer {
         CONSTRAINT valid_name CHECK (length(name) > 0)
       )
     ''');
-
-    await db.runCustom('''
-      CREATE TABLE IF NOT EXISTS ui_settings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        table_name TEXT NOT NULL,
-        settings TEXT NOT NULL,
-        created_at DATETIME NOT NULL,
-        updated_at DATETIME NOT NULL,
-        is_deleted BOOLEAN NOT NULL DEFAULT 0,
-        CONSTRAINT valid_table_name CHECK (length(table_name) > 0),
-        CONSTRAINT valid_settings CHECK (length(settings) > 0)
-      )
-    ''');
-
-    await db.runCustom('''
-      CREATE TABLE IF NOT EXISTS plugin_settings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        plugin_name TEXT NOT NULL,
-        settings_key TEXT NOT NULL,
-        settings_value TEXT NOT NULL,
-        created_at DATETIME NOT NULL,
-        updated_at DATETIME NOT NULL,
-        is_deleted BOOLEAN NOT NULL DEFAULT 0,
-        CONSTRAINT valid_plugin_name CHECK (length(plugin_name) > 0),
-        CONSTRAINT valid_settings_key CHECK (length(settings_key) > 0)
-      )
-    ''');
   }
 
   /// Creates default data for a new database
@@ -286,12 +242,6 @@ class DatabaseInitializer {
     await db.runCustom(
       'INSERT INTO people (name, is_super_user, created_at, updated_at, is_deleted) VALUES (?, 1, ?, ?, 0)',
       ['Admin', now, now],
-    );
-
-    // Create default UI settings
-    await db.runCustom(
-      'INSERT INTO ui_settings (table_name, settings, created_at, updated_at, is_deleted) VALUES (?, ?, ?, ?, 0)',
-      ['global', '{"theme":"light","fontSize":14}', now, now],
     );
   }
 }

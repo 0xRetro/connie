@@ -51,6 +51,11 @@ class NavBar extends StatelessWidget implements PreferredSizeWidget {
             onPressed: () => context.go('/ai'),
           ),
           _buildNavButton(
+            icon: Icons.memory,
+            label: 'Context',
+            onPressed: () => context.go('/context'),
+          ),
+          _buildNavButton(
             icon: Icons.settings,
             label: 'Settings',
             onPressed: () => context.go('/settings'),

@@ -65,8 +65,7 @@ class SetupWorkflowService {
       final health = await dbService.checkDatabaseHealth();
       
       return health['isHealthy'] == true &&
-             health['hasDefaultData'] == true &&
-             health['hasDefaultSettings'] == true;
+             health['hasDefaultData'] == true;
     } catch (e, stack) {
       LoggerService.error(
         'Setup validation failed',

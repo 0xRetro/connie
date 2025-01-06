@@ -8,10 +8,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../config/environment.dart';
 import '../services/logger_service.dart';
 import 'tables/people_table.dart';
-import 'tables/ui_settings_table.dart';
-import 'tables/plugin_settings_table.dart';
 import 'daos/app_dao.dart';
-import 'daos/dynamic_table_dao.dart';
 
 part 'database.g.dart';
 
@@ -34,12 +31,9 @@ LazyDatabase _openConnection() {
 @DriftDatabase(
   tables: [
     PeopleTable,
-    UiSettingsTable,
-    PluginSettingsTable,
   ],
   daos: [
     AppDao,
-    DynamicTableDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -131,12 +125,6 @@ class AppDatabase extends _$AppDatabase {
         ..where((t) => t.isDeleted.equals(false)))
         .get()
         .then((rows) => rows.isNotEmpty);
-
-      // Check if default settings exist
-      final hasDefaultSettings = await (select(uiSettingsTable)
-        ..where((t) => t.isDeleted.equals(false)))
-        .get()
-        .then((rows) => rows.isNotEmpty);
       
       // Check schema version
       final currentVersion = schemaVersion;
@@ -145,95 +133,22 @@ class AppDatabase extends _$AppDatabase {
       ).getSingle().then((row) => row.data['user_version'] as int);
       
       final needsMigration = dbVersion < currentVersion;
+      final isHealthy = await verifyConnection();
       
       return {
         'size': size.data['size'],
         'version': currentVersion,
         'dbVersion': dbVersion,
         'tables': tableCount,
-        'isHealthy': await verifyConnection(),
         'hasDefaultData': hasDefaultData,
-        'hasDefaultSettings': hasDefaultSettings,
         'needsMigration': needsMigration,
+        'isHealthy': isHealthy,
       };
     } catch (e, stack) {
       LoggerService.error(
         'Failed to get database metrics',
         error: e,
         stackTrace: stack,
-      );
-      rethrow;
-    }
-  }
-
-  /// Creates a backup of the database
-  Future<File> backup() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final backupPath = p.join(
-      dbFolder.path,
-      'backups',
-      'connie_${DateTime.now().toIso8601String()}.db',
-    );
-
-    try {
-      // Ensure backup directory exists
-      final backupDir = Directory(p.dirname(backupPath));
-      if (!await backupDir.exists()) {
-        await backupDir.create(recursive: true);
-      }
-
-      // Create backup
-      final backupFile = File(backupPath);
-      await customStatement('VACUUM INTO ?', [backupPath]);
-      
-      LoggerService.info('Database backup created', data: {
-        'path': backupPath,
-        'size': await backupFile.length(),
-      });
-      
-      return backupFile;
-    } catch (e, stack) {
-      LoggerService.error(
-        'Failed to create database backup',
-        error: e,
-        stackTrace: stack,
-        data: {'path': backupPath},
-      );
-      rethrow;
-    }
-  }
-
-  /// Restores database from backup
-  Future<void> restoreFromBackup(File backupFile) async {
-    if (!await backupFile.exists()) {
-      throw StateError('Backup file does not exist: ${backupFile.path}');
-    }
-
-    try {
-      // Close current connection
-      await close();
-      
-      // Get current database file
-      final dbFolder = await getApplicationDocumentsDirectory();
-      final dbFile = File(p.join(dbFolder.path, 'connie.db'));
-      
-      // Replace with backup
-      await backupFile.copy(dbFile.path);
-      
-      // Reinitialize database
-      _initialized = false;
-      await initialize();
-      
-      LoggerService.info('Database restored from backup', data: {
-        'backup': backupFile.path,
-        'size': await dbFile.length(),
-      });
-    } catch (e, stack) {
-      LoggerService.error(
-        'Failed to restore database from backup',
-        error: e,
-        stackTrace: stack,
-        data: {'backup': backupFile.path},
       );
       rethrow;
     }

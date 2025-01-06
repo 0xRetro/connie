@@ -1,12 +1,10 @@
 import 'package:drift/drift.dart';
 import '../database.dart';
 import '../tables/people_table.dart';
-import '../tables/ui_settings_table.dart';
-import '../tables/plugin_settings_table.dart';
 
 part 'app_dao.g.dart';
 
-@DriftAccessor(tables: [PeopleTable, UiSettingsTable, PluginSettingsTable])
+@DriftAccessor(tables: [PeopleTable])
 class AppDao extends DatabaseAccessor<AppDatabase> with _$AppDaoMixin {
   AppDao(AppDatabase db) : super(db);
 
@@ -24,16 +22,4 @@ class AppDao extends DatabaseAccessor<AppDatabase> with _$AppDaoMixin {
 
   Future<int> deletePerson(int id) =>
       (delete(peopleTable)..where((t) => t.id.equals(id))).go();
-
-  // UI Settings operations
-  Future<List<UiSetting>> getUiSettingsForTable(String tableName) =>
-      (select(uiSettingsTable)..where((t) => t.targetTableName.equals(tableName))).get();
-
-  Future<int> saveUiSettings(UiSettingCompanion settings) =>
-      into(uiSettingsTable).insert(settings);
-
-  Future<bool> updateUiSettings(UiSetting settings) =>
-      update(uiSettingsTable).replace(settings);
-
-
 } 

@@ -7,6 +7,7 @@ import '../ui/screens/people_screen.dart';
 import '../ui/screens/setup_workflow_screen.dart';
 import '../ui/screens/error_screen.dart';
 import '../ui/screens/ai_screen.dart';
+import '../ui/screens/context_screen.dart';
 import '../services/logger_service.dart';
 import '../services/navigation_analytics_service.dart';
 import '../config/environment.dart';
@@ -53,6 +54,13 @@ final appRouter = GoRouter(
       builder: (context, state) {
         LoggerService.logNavigation('previous', AppRoutes.ai);
         return const AIScreen();
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.context,
+      builder: (context, state) {
+        LoggerService.logNavigation('previous', AppRoutes.context);
+        return const ContextScreen();
       },
     ),
     GoRoute(
@@ -157,6 +165,7 @@ class AppRoutes {
   static const String settings = '/settings';
   static const String people = '/people';
   static const String ai = '/ai';
+  static const String context = '/context';
   static const String setup = '/setup';
   static const String error = '/error';
 }
